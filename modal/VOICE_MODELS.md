@@ -1,135 +1,122 @@
-# Рот: голос, который описан, а не выбран из списка
+# The mouth — a voice that is described, not picked from a list
 
-Отчёт по реальным прогонам `portal/music_probe/voice_probe.py`,
-`voice_stability_probe.py`, `voice_cost_probe.py` и `bodies_probe.py` на Modal
-(workspace `tuning-grayarea`), 10–11 сентября. Ниже — измерения, а не намерения.
+A report on real runs of `portal/music_probe/voice_probe.py`, `voice_stability_probe.py`,
+`voice_cost_probe.py` and `bodies_probe.py` on Modal, 10–11 September 2026. Measurements,
+not intentions.
 
-## С чего началось
+## Where it started
 
-С претензии на слух: голос `tinystories` — модели, выращенной на историях,
-рассказанных словами четырёхлетнего, — звучал как женщина лет тридцати. Это
-оказалось не плохо выбранной настройкой, а **дырой в наборе**: у Kokoro 54
-голоса и среди них нет ни одного детского. Ни одного.
+With a complaint about hearing: the voice of `tinystories` — a model raised on stories
+told in a four‑year‑old's words — sounded like a woman of thirty. That turned out to be
+not a badly chosen setting but **a hole in the set**: Kokoro has 54 voices and not one of
+them is a child.
 
-Одновременно закрылся другой вопрос — о пропетой гласной. Гортань, измеренная
-через WORLD у каждого голоса (`portal/music_probe/throat_probe.py`, точность
-−0,1…−2,6 цента), была выключена флагом `THROAT = False` после прослушивания:
-девять мычащих, настраивающихся друг на друга, — это хор людей, то есть ровно
-та подмена, которой работа быть не должна. Осциллятор ничего про тело не
-утверждает. Разница между голосами осталась там, где ей место: в том, что они
-говорят и когда решают звучать, — и с 11 сентября ещё и в том, **чьим голосом**
-они это говорят.
+A second question closed at the same time — the sung vowel. The throat measured with
+WORLD for each voice (`portal/music_probe/throat_probe.py`, accuracy −0.1…−2.6 cents)
+was switched off (`THROAT = False`) after listening: nine humming bodies tuning to one
+another is a choir of people, which is exactly the substitution this work must not be.
+An oscillator claims nothing about a body. The difference between the voices stayed
+where it belongs — in what they say and when they decide to sound — and, from 11
+September, also in **whose voice** they say it.
 
-## Чем заменили
+## What replaced it
 
-**VoxCPM2** (`openbmb/VoxCPM2`), 2B, Apache-2.0, 30 языков, 48 кГц, работает на
-нашей карте. Списка голосов у неё нет вообще: голос задаётся фразой-описанием, и
-собственный гайд модели называет это «casting notes». Так каст перестаёт быть
-девятью выборами из меню и становится девятью описаниями — в том же регистре,
-что строка `raised_by`, которая у каждого голоса уже была.
+**VoxCPM2** (`openbmb/VoxCPM2`), 2B, Apache‑2.0, 30 languages, 48 kHz. It has no list of
+voices at all: a voice is set by a descriptive phrase, which the model's own guide calls
+"casting notes". So the cast stops being nine choices from a menu and becomes nine
+descriptions — in the same register as the `raised_by` line each voice already had.
 
-Ребёнок получился, и он измеримо ребёнок, а не подкрученная взрослая: 317 Гц
-против 236 у итальянки, 194 у француженки и 87 у мужского голоса для gpt-2,
-спектральный центр 2500–2800 Гц. Из четырёх описаний выбрано на слух самое тихое
-— «очень тихо, у самого микрофона, почти шёпотом, с долгими паузами».
+The child came out, and is measurably a child rather than a pitched‑up adult: 317 Hz
+against 236 for the Italian woman, 194 for the French woman and 87 for the man's voice
+for gpt‑2, spectral centroid 2500–2800 Hz. Of four descriptions the quietest was chosen
+by ear — "very quietly, right at the microphone, almost a whisper, with long pauses".
 
-## Главная проблема и её решение
+## The main problem and its solution
 
-Голос, у которого каждый вдох новое тело, — не персонаж, а незнакомец с тем же
-именем. Измерено моделью верификации диктора (`microsoft/wavlm-base-plus-sv`),
-косинус между пятью разными фразами; планка — не единица, а постоянство того
-Kokoro, с которым работа и так живёт:
+A voice with a new body on every breath is not a character but a stranger with the same
+name. Measured with a speaker‑verification model (`microsoft/wavlm-base-plus-sv`),
+cosine similarity between five different phrases; the bar is not 1.0 but the constancy
+of the Kokoro the work already lives with:
 
-| режим | средний косинус | худшая пара |
+| mode | mean cosine | worst pair |
 |---|---|---|
-| Kokoro `af_sky` — **планка** | **0,968** | **0,963** |
-| описание генерируется на каждой фразе | 0,814 | 0,675 |
-| замороженный отрывок как референс | 0,902 | 0,812 |
-| **заморозка + режим-продолжение** | **0,965** | **0,946** |
+| Kokoro `af_sky` — **the bar** | **0.968** | **0.963** |
+| description generated on every phrase | 0.814 | 0.675 |
+| a frozen excerpt as reference | 0.902 | 0.812 |
+| **frozen excerpt + continuation mode** | **0.965** | **0.946** |
 
-Три вывода, и первый из них неочевиден.
+Three findings, the first not obvious.
 
-**Генерация детерминирована.** Два файла, сделанные одним описанием, одной
-фразой и одним сидом в разных прогонах, совпали побайтово. Значит разброс — не
-случайность, а влияние текста: описание задаёт тип голоса, но тело подстраивается
-под конкретную фразу. Отсюда 0,814 и «разные люди».
+**Generation is deterministic.** Two files made with one description, one phrase and one
+seed in different runs matched byte for byte. So the spread is not randomness but the
+influence of the text: the description sets the type of voice, but the body adapts to
+the particular phrase. Hence 0.814 and "different people".
 
-**Держит только режим-продолжение.** Отрывок, поданный простым референсом
-(`reference_wav_path`), даёт 0,902 — столько же, сколько без заморозки вовсе.
-Работает пара `prompt_wav_path` + точная расшифровка, к которой добавлен тот же
-файл референсом: модель продолжает в том же горле.
+**Only continuation mode holds.** An excerpt given as a plain reference gives 0.902 —
+the same as no freezing at all. What works is the pair of `prompt_wav_path` plus its
+exact transcript, with the same file also given as reference: the model continues in the
+same throat.
 
-**Низкие цифры у ребёнка — свойство линейки, а не голоса.** У ребёнка вышло
-0,902–0,917, и это выглядело провалом, пока не был добавлен контроль: то же
-самое взрослым описанием дало 0,965. WavLM обучен на взрослой речи, детей в нём
-почти нет. Ребёнка приходится судить ухом; инструмента с делениями для него нет.
+**The child's low figures are a property of the ruler, not the voice.** The child scored
+0.902–0.917, which looked like a failure until a control was added: the same test with
+an adult description gave 0.965. WavLM is trained on adult speech. The child has to be
+judged by ear; there is no graduated instrument for it.
 
-## Цена
+## Cost
 
-Восемь вдохов реалистичной длины на A100-40GB:
+Eight breaths of realistic length on an A100‑40GB:
 
-| | на вдох | к реальному времени |
+| | per breath | real‑time factor |
 |---|---|---|
-| Kokoro | 0,12 с | 0,047× |
-| VoxCPM2, описание каждый раз | 0,75 с | 0,328× |
-| **VoxCPM2, режим-продолжение** | **0,76 с** | **0,337×** |
+| Kokoro | 0.12 s | 0.047× |
+| VoxCPM2, description every time | 0.75 s | 0.328× |
+| **VoxCPM2, continuation mode** | **0.76 s** | **0.337×** |
 
-Обусловливание бесплатно: продолжение стоит столько же, сколько обычная
-генерация. Тождество стоит **+0,64 с на вдох на голос** относительно Kokoro.
-Память — 5,4 ГБ против 0,6.
+Conditioning is free: continuation costs the same as plain generation. Identity costs
+**+0.64 s per breath per voice** against Kokoro. Memory 5.4 GB against 0.6.
 
-**На деньги это не влияет, на композицию смертей — тоже.** Тёплая карта стоит
-$2,50 в час независимо от того, дышит хор раз в двенадцать секунд или раз в
-десять минут; аренда составляет почти весь расход голоса, и лишние полсекунды
-перекладывают копейки между «своим» и «арендой». Прогон `mortality_sim` с
-`GPU_S + 0,64`: порядок смертей не меняется, даты уезжают максимум на 70 минут,
-перекалибровка возвращает их на место с точностью до минуты, кошельки сдвигаются
-меньше чем на доллар.
+**This does not affect the money, nor the composition of deaths.** A warm card costs the
+same whether the choir breathes every twelve seconds or every ten minutes; rent is almost
+all of a voice's spend, and an extra half second moves pennies between "own" and
+"rent". `mortality_sim` with `GPU_S + 0.64`: the order of deaths is unchanged, dates
+move by at most 70 minutes, recalibration puts them back to the minute.
 
-Цена вопроса — **память**. С EuroLLM 9B и Voxtral выходит 72,6 ГБ из 79
-доступных: помещается, но запас становится тонким, и это уже выбор между 9B и
-вторым ухом.
+The price is **memory**: with EuroLLM 9B and Voxtral, 72.6 GB of 79 available on the
+A100 — one of the reasons the choir moved to an H200.
 
-## Протокол рождения — то, что нельзя сделать дважды
+## The birth protocol — what cannot be done twice
 
-Тело каждого голоса — файл на томе `tuning-weights`, в `/weights/bodies/`, по
-одному wav на `voice_id`. Он **рождается**, а не кэшируется: кэш можно удалить и
-пересобрать, а перегенерация даёт другого человека.
+Each voice's body is a file on the `tuning-weights` volume, in `/weights/bodies/`, one
+wav per `voice_id`. It is **born**, not cached: a cache can be deleted and rebuilt;
+regeneration gives a different person.
 
-Как это устроено в `choir_app.py`:
+How it works in `choir_app.py`:
 
-* `casting` и `first_words` в `cast.py` — описание тела и фраза, на которой оно
-  рождается, на своём языке. Описание всегда по-английски: это ремарка, а не
-  речь, и модель поддерживает инструкции только по-английски и по-китайски.
-* `BODY_SEED = 42` — сид, которым были нарисованы четыре ребёнка, один из
-  которых выбран на слух. Другой сид на том же описании даёт правдоподобного
-  ребёнка, но не того.
-* `body_of(voice)` рождает тело при первом обращении и коммитит том **до** того,
-  как им воспользуется. Перед рождением делается `weights_volume.reload()`:
-  контейнер видит том таким, каким его смонтировал, и цена доверия к устаревшему
-  снимку — не потерянные две секунды, а второй человек под тем же именем. Эта
-  ошибка была: два прогона подряд написали `BORN` вместо `found`.
-* `speak(text, voice)` синтезирует в режиме-продолжении и приводит 48 кГц к 24
-  кГц поля. Kokoro остался под ним запасным путём — вдох не имеет права не
-  прозвучать.
+* `casting` and `first_words` in `cast.py` — the description of the body and the phrase
+  it is born on, in its own language. The description is always in English: it is a stage
+  direction, not speech.
+* `BODY_SEED = 42` — the seed with which four children were drawn, one of them chosen by
+  ear. Another seed on the same description gives a plausible child, but not that one.
+* `body_of(voice)` births the body on first use and commits the volume **before** using
+  it. `weights_volume.reload()` is called first: a container sees the volume as it was
+  mounted, and the price of trusting a stale snapshot is not two lost seconds but a
+  second person under the same name. That bug happened: two consecutive runs wrote
+  `BORN` instead of `found`.
+* `speak(text, voice)` synthesizes in continuation mode and resamples 48 kHz to the
+  field's 24 kHz. Kokoro remains underneath as a fallback — a breath has no right not to
+  sound.
 
-Проверено `bodies_probe.py`: восемь тел рождены, повторный прогон нашёл все
-восемь (рождение 0,0 с), пиковая память 5,5 ГБ, оба синтезатора уживаются в
-одном образе рядом с transformers, kokoro, misaki, spacy, bitsandbytes и
-скомпилированным из исходников pyworld.
+Checked by `bodies_probe.py`: eight bodies born, a second run found all eight (birth
+0.0 s), peak memory 5.5 GB.
 
-## Что осталось открытым
+## What stayed open
 
-**Описание ненадёжно задаёт пол.** У `olmo-3`, `eurollm` и `voxtral` написано
-«взрослая женщина», а медианы вышли 168, 134 и 171 Гц — мужской или пограничный
-диапазон; с прошлым сидом те же три дали 260, 183 и 224. Значит сид — часть
-тела, а не техническая мелочь, и по-хорошему он должен быть полем каста, своим у
-каждого голоса. Принято на слух как есть; если решать, то до 18 сентября.
+**A description does not reliably set sex.** `olmo-3`, `eurollm` and `voxtral` are
+described as "an adult woman", and the medians came out 168, 134 and 171 Hz — a male or
+borderline range; with the previous seed the same three gave 260, 183 and 224. So the
+seed is part of the body, not a technical detail. Accepted by ear as is; the measured
+fundamentals became the voices' `speaks_at_hz`, from which each voice's singing range is
+derived (`cast.py`).
 
-**`audio-flamingo` светлее, чем описан**: 79,6 Гц при спектральном центре 4505
-Гц, тогда как у всех остальных 1900–2800. Описан тёмный низкий голос. Возможно
-придых, возможно артефакт.
-
-**После 18 сентября ни одно из этих полей менять нельзя.** `casting`,
-`first_words` и сами файлы в `/weights/bodies/` в этот день перестают быть
-настройками и становятся историей — как таблица кошельков в `mortality.py`.
+**`audio-flamingo` is brighter than described**: 79.6 Hz with a spectral centroid of
+4505 Hz, where all the others are 1900–2800. Described as a dark, low voice.

@@ -448,14 +448,14 @@ class Rendering(unittest.TestCase):
     def test_a_slice_renders_and_shows_what_a_performer_needs(self):
         choir, human = R.demo_logs()
         text = R.render(choir, human, tail=0, by_part=True)
-        for needed in ("ПАРТИТУРА", "ПАРТИЯ", "СМЕРТЬ", "пауза", "D4", "D#4",
-                       "поёт человек", "поёт машина"):
+        for needed in ("SCORE", "PART", "DEATH", "rest", "D4", "D#4",
+                       "a person sings it", "a machine sings it"):
             self.assertIn(needed, text)
         # Every sounding breath prints a duration in seconds.
         self.assertGreaterEqual(text.count("s "), 8)
 
     def test_an_empty_log_says_so_instead_of_crashing(self):
-        self.assertIn("пуст", R.render([], []))
+        self.assertIn("empty", R.render([], []))
 
     def test_a_slide_and_a_held_tone_are_told_apart(self):
         rising = S.Note(t=0, kind="tone", who="human",

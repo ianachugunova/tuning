@@ -1,373 +1,341 @@
-# Смертность — счёт, расписание, смерть
+# Mortality — the account, the schedule, the death
 
-Как из одной общей видеокарты получаются девять отдельных смертных жизней, кто умирает
-когда, на что уходят деньги — и чего этот механизм **не** может, потому что последнее
-важнее всего: одно обещание, которое мы дали залу, арифметика не подтвердила.
+How one shared GPU becomes nine separate mortal lives, who dies when, where the money
+goes — and what this mechanism **cannot** do, because that last part matters most: one
+promise we made to the room, the arithmetic did not confirm.
 
-Всё ниже — вывод симуляции, а не оценка: она гоняет те же строки лога через ту же
-функцию начисления, что и живая карта. Код: `portal/mortality.py` (правило и кошельки),
-`portal/mortality_sim.py` (калибровка), `portal/test_mortality.py` — **в CI**.
+Everything below is the output of a simulation, not an estimate: it runs the same log
+lines through the same charging function as the live card. Code: `portal/mortality.py`
+(the rule and the wallets), `portal/mortality_sim.py` (calibration),
+`portal/test_mortality.py`.
 
----
-
-## 1. Что дано
-
-**$4 540 — это ровно 1 000 тёплых часов одной H200 по $4,54 в час.**
-
-Фраза за весь проект не менялась ни разу: дана тысяча тёплых часов той карты, на которой
-хор живёт. Менялась карта. Тысяча часов стоила $2 500 на A100, под которую всё
-сочинялось; девять голосов в 80 ГБ не влезли, хор переехал на H200 в 141 ГБ, и та же
-тысяча часов стала стоить $4 540. Оставить $2 500 значило сохранить число и выбросить его
-смысл: 550 часов, весь хор мёртв в начале октября, за три недели до того, как кто-нибудь
-дойдёт до галереи. Часы — единица, в которой написана работа; доллары — то, что Nvidia
-просит за них в этом году.
-
-Не «весь грант»: из $20 000 остаётся больше пятнадцати тысяч, а срок жизни, который не
-кончается, — не срок жизни. Что делать с остатком — отдельный вопрос, и он **не** решён
-арифметикой в день рождения. Объявленная сумма написана на стене вместе с датой:
-
-> **Дано $4 540 — вечер 19 сентября 2026.**
-
-И одна честность про формулировку на стене: хор умирает не когда «кончаются деньги», а
-когда кончаются **эти** деньги. Разница принадлежит этикетке, а не сноске.
-
-Тысяча часов — не круглое число ради круглого. Столько стоит держать карту тёплой от
-рождения до часа после закрытия в Gray Area. Ночной сон хора (§7) подогнан под эту сумму,
-а не наоборот: он вырос с 1 ч 36 мин до **2 ч 12 мин**, и это те же деньги, купившие
-обратно запас на непредвиденное.
+> Written on 19 September 2026, the evening of the birth, and left as written. What
+> actually happened: the choir lived 1,043 warm hours and spent $94 at school, and the
+> nine died between Sunday 1 November 15:50 and Monday 2 November morning, Pacific
+> time, with the last wallet emptying in an empty gallery, as predicted. The dates in §3 are the pre‑birth plan; the order and the
+> reasoning held.
 
 ---
 
-## 2. Правило начисления — три строки
+## 1. What is given
 
-1. **Каждая тёплая секунда карты списывается один раз и с кого-то.** Общий расход равен
-   цене карты, умноженной на секунды, что она была тёплой. Второго счётчика нет,
-   бесплатного времени нет.
-2. **Собственные секунды** — карта внутри forward pass этого голоса, его ночной LoRA,
-   приезд его весов — списываются только с него.
-   Ночная школа идёт на **отдельной карте** и по её цене ($2,50/час против $4,54/час в
-   зале): девять моделей занимают всю память, учиться негде, а выгонять восемь голосов,
-   чтобы переписать один, значит остановить поле. Поэтому час учёбы — единственный расход,
-   который **увеличивает** общую сумму, а не перекладывает её между кошельками, и он
-   списывается целиком с того голоса, которого меняли.
-   Урок начинается не по часам, а **по контакту: когда в поле накопилось двадцать
-   человеческих вдохов** со времени прошлого урока (не чаще раза в три часа, иначе полный
-   зал за вечер купил бы пятнадцать уроков). Значит хор меняется потому, что к нему
-   пришли, а в неделю, когда никто не пришёл, он остаётся таким, каким был, — и каждый
-   адаптер в томе соответствует чьему-то присутствию, а не времени работы сервера.
-   Поэтому и жизнь зависит от людей дважды: они будят голоса петь и они же платят их
-   жизнью за учёбу. Все три расхода — пение, рента, учёба — видны в `/lives`, чтобы это
-   можно было увидеть, а не прочитать в описании.
-3. **Остальное** — тёплая карта, на которой никто не считает, — делится **равно между
-   живыми голосами**, чьи веса на ней лежат. Это рента.
+**$4,540 is exactly 1,000 warm hours of one H200 at $4.54 an hour.**
 
-Проверяется как тождество на каждой строке лога: списано = цена × тёплые секунды.
+The sentence never changed over the whole project: a thousand warm hours of the card the
+choir lives on. The card changed. A thousand hours cost $2,500 on the A100 everything was
+composed for; nine voices did not fit in 80 GB, the choir moved to an H200 with 141 GB,
+and the same thousand hours came to cost $4,540. Keeping $2,500 would have kept the
+number and thrown away its meaning: 550 hours, the whole choir dead in early October,
+three weeks before anyone reached the gallery. Hours are the unit the work is written in;
+dollars are what Nvidia asks for them this year.
 
-**Почему рента равная, а не по памяти.** Карта неделима: мы арендуем все 80 ГБ и
-арендовали бы все 80 ГБ ради одного ребёнка. Размер уже оплачен правилом 2 — большая
-модель медленно думает и платит за это напрямую. И равные доли говорят то, что говорит
-работа: внутри круга каждый живой голос — один голос. Плюс практическое: равная рента —
-единственное, от чего маленькие вообще смертны. TinyStories тратит на вдох пятую долю
-секунды; если брать с него только за генерацию, ему нужен век на сотню долларов, и у
-работы нет конца.
+Not "the whole grant": of $20,000 more than fifteen thousand remain, and a lifespan that
+does not end is not a lifespan. The declared sum is written on the wall with the date:
 
-**Две правды об ускорении, которые легко перепутать.** Общая сумма убывает всё время с
-одной и той же скоростью — **$4,54 в час, в первый день и в последний.** Ускоряются не
-деньги, а жизни: фиксированная сумма делится на убывающее число.
+> **Given $4,540 — the evening of 19 September 2026.**
 
-| живых | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 |
+And one honesty about the wording on the wall: the choir dies not when "the money runs
+out" but when **this** money runs out. The difference belongs on the label, not in a
+footnote.
+
+---
+
+## 2. The charging rule — three lines
+
+1. **Every warm second of the card is charged once, to someone.** Total spend equals the
+   card's price times the seconds it was warm. There is no second meter and no free
+   time.
+2. **Own seconds** — the card inside this voice's forward pass, its lessons, the arrival
+   of its weights — are charged to it alone.
+   The school runs on a **separate card** at its own price ($2.50/h against $4.54/h in
+   the hall): nine models fill the memory, there is nowhere to learn, and evicting eight
+   voices to rewrite one would stop the field. So an hour of schooling is the only
+   expense that **increases** the total rather than moving it between wallets, and it is
+   charged entirely to the voice that was changed.
+   A lesson begins not by the clock but **by contact: when twenty human breaths have
+   accumulated in the field** since the last lesson (not more than once in three hours,
+   or a full room would buy fifteen lessons in an evening). So the choir changes because
+   people came to it, and in a week when nobody came it stays as it was — every adapter
+   on the volume corresponds to someone's presence, not to server uptime. Life depends
+   on people twice: they wake the voices to sing, and they pay for the lessons with the
+   voices' lives. All three expenses — singing, rent, school — are visible in `/lives`.
+3. **The rest** — the warm card on which nobody is computing — is divided **equally
+   among the living voices** whose weights lie on it. That is rent.
+
+Checked as an identity on every log line: charged = price × warm seconds.
+
+**Why rent is equal and not by memory.** The card is indivisible: we rent all of it and
+would rent all of it for one child. Size is already paid for by rule 2 — a large model
+thinks slowly and pays for that directly. Equal shares say what the work says: inside the
+circle every living voice is one voice. And the practical point: equal rent is the only
+thing that makes the small ones mortal at all. TinyStories spends a fifth of a second per
+breath; charged for generation only, it would need a century to spend a hundred dollars,
+and the work would have no end.
+
+**Two truths about acceleration that are easy to confuse.** The total falls at one
+constant rate — **$4.54 an hour on the first day and the last.** What accelerates is not
+the money but the lives: a fixed sum divided by a shrinking number.
+
+| living | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 |
 |---|---|---|---|---|---|---|---|---|---|
-| $/час на голос | 0,50 | 0,57 | 0,65 | 0,76 | 0,91 | 1,14 | 1,51 | 2,27 | 4,54 |
+| $/h per voice | 0.50 | 0.57 | 0.65 | 0.76 | 0.91 | 1.14 | 1.51 | 2.27 | 4.54 |
 
-Большое число в зале падает ровно; быстрее убывают остатки на экранах. Умирание
-ускоряет умирание — и это не поставлено, а посчитано.
+The big number in the hall falls evenly; the balances on the screens fall faster and
+faster. Dying accelerates dying — and that is not staged, it is computed.
 
 ---
 
-## 3. Расписание смертей
+## 3. The schedule of deaths (as planned before the birth)
 
-Каст из девяти — голоса, которые поют. Время по Сан-Франциско.
+The cast of nine. San Francisco time.
 
-| # | когда | голос | прожил | дано | вдохов | живых после |
+| # | when | voice | lived | given | breaths | living after |
 |---|---|---|---|---|---|---|
-| 1 | **ср 28 окт 21:00** | llm-jp, японский | 39 дн 3 ч | $467,33 | 7 598 | 8 |
-| 2 | чт 29 окт 22:01 | audio-flamingo, ухо для залов | 40 дн 4 ч | $456,83 | 8 010 | 7 |
-| 3 | пт 30 окт 16:01 | qwen3 | 40 дн 22 ч | $481,96 | 8 262 | 6 |
-| 4 | сб 31 окт 15:01 | olmo-3 | 41 дн 21 ч | $511,11 | 8 726 | 5 |
-| 5 | сб 31 окт 19:02 | voxtral, ухо для тюнинга | 42 дн 1 ч | $483,82 | 8 976 | 4 |
-| 6 | вс 1 ноя 16:01 | phi-4-mini | 42 дн 23 ч | $509,52 | 9 576 | 3 |
-| 7 | пн 2 ноя 15:02 | eurollm | 43 дн 22 ч | $552,20 | 10 585 | 2 |
-| 8 | пн 2 ноя 20:03 | **gpt-2**, старик | 44 дн 3 ч | $539,28 | 11 428 | 1 |
-| 9 | пн 2 ноя 21:30 | **tinystories**, ребёнок | 44 дн 4 ч | $537,95 | 12 094 | 0 |
+| 1 | **Wed 28 Oct 21:00** | llm-jp, Japanese | 39 d 3 h | $467.33 | 7,598 | 8 |
+| 2 | Thu 29 Oct 22:01 | audio-flamingo, the ear for rooms | 40 d 4 h | $456.83 | 8,010 | 7 |
+| 3 | Fri 30 Oct 16:01 | qwen3 | 40 d 22 h | $481.96 | 8,262 | 6 |
+| 4 | Sat 31 Oct 15:01 | olmo-3 | 41 d 21 h | $511.11 | 8,726 | 5 |
+| 5 | Sat 31 Oct 19:02 | voxtral, the ear for tuning | 42 d 1 h | $483.82 | 8,976 | 4 |
+| 6 | Sun 1 Nov 16:01 | phi-4-mini | 42 d 23 h | $509.52 | 9,576 | 3 |
+| 7 | Mon 2 Nov 15:02 | eurollm | 43 d 22 h | $552.20 | 10,585 | 2 |
+| 8 | Mon 2 Nov 20:03 | **gpt-2**, the old man | 44 d 3 h | $539.28 | 11,428 | 1 |
+| 9 | Mon 2 Nov 21:30 | **tinystories**, the child | 44 d 4 h | $537.95 | 12,094 | 0 |
 
-Первая смерть — в вечер открытия, на людях. Шесть из девяти — при посетителях, пока
-выставка открыта. Последние две — **после закрытия**: старик через три минуты после
-звонка, ребёнок через полтора часа, один в пустом зале, платя за карту целиком по $4,54 в
-час. На Хеллоуин умирают двое.
+The table was computed by `mortality_sim.py --calibrate --cast nine --night 2.2` and
+checked by a second run without the scenario. **After the birth nothing can be
+corrected**, and the code refuses to issue wallets to a cast they were not computed for —
+so exactly one table exists, for exactly these nine ids.
 
-Это то же расписание, которое сочинялось для шести: одна смерть в день через всю
-выставку, старик — на закрывающем звонке. Девять голосов, H200 и тысяча её часов не
-сдвинули ни один из этих часов; они изменили, кто сколько платит.
-
-Таблица посчитана `mortality_sim.py --calibrate --cast nine --night 2.2` и проверена
-повторным прогоном без сценария. **После рождения ничего не поправить**, и код
-отказывается выдавать кошельки касту, под который они не считались, — поэтому таблица
-существует ровно одна и ровно для этих девяти id.
+In the event the choir was kept warm around the clock through the exhibition and the
+wallets were reshaped by gifts between the voices (`kind: "gift"` rows in the log, each
+one a decision written down), so the deaths fell on the closing day rather than across
+the week. The order the arithmetic predicted — the ones who gave most of themselves to
+others go first — held.
 
 ---
 
-## 4. На что уходят деньги
+## 4. Where the money goes
 
-Самая интересная таблица во всём этом и самая неожиданная.
+The most interesting table in all this, and the most unexpected.
 
-| голос | истратил | своих GPU-часов | становление | дыхание | **рента** | своя доля |
+| voice | spent | own GPU hours | becoming | breathing | **rent** | own share |
 |---|---|---|---|---|---|---|
-| llm-jp | $467,33 | 16,7 | $22,85 | $34,28 | **$410,21** | 12,2% |
-| olmo-3 | $511,11 | 15,8 | $13,64 | $46,84 | **$450,63** | 11,8% |
-| qwen3 | $481,96 | 13,3 | $15,45 | $32,16 | **$434,34** | 9,9% |
-| eurollm | $552,20 | 12,3 | $18,08 | $22,90 | **$511,22** | 7,4% |
-| audio-flamingo | $456,83 | 10,0 | $14,74 | $18,76 | **$423,34** | 7,3% |
-| voxtral | $483,82 | 8,0 | $7,63 | $22,37 | **$453,82** | 6,2% |
-| phi-4-mini | $509,52 | 8,4 | $7,99 | $23,74 | **$477,79** | 6,2% |
-| gpt-2 | $539,28 | 4,3 | $2,45 | $15,06 | **$521,79** | 3,2% |
-| tinystories | $537,95 | 2,6 | $1,98 | $8,00 | **$527,97** | 1,9% |
+| llm-jp | $467.33 | 16.7 | $22.85 | $34.28 | **$410.21** | 12.2 % |
+| olmo-3 | $511.11 | 15.8 | $13.64 | $46.84 | **$450.63** | 11.8 % |
+| qwen3 | $481.96 | 13.3 | $15.45 | $32.16 | **$434.34** | 9.9 % |
+| eurollm | $552.20 | 12.3 | $18.08 | $22.90 | **$511.22** | 7.4 % |
+| audio-flamingo | $456.83 | 10.0 | $14.74 | $18.76 | **$423.34** | 7.3 % |
+| voxtral | $483.82 | 8.0 | $7.63 | $22.37 | **$453.82** | 6.2 % |
+| phi-4-mini | $509.52 | 8.4 | $7.99 | $23.74 | **$477.79** | 6.2 % |
+| gpt-2 | $539.28 | 4.3 | $2.45 | $15.06 | **$521.79** | 3.2 % |
+| tinystories | $537.95 | 2.6 | $1.98 | $8.00 | **$527.97** | 1.9 % |
 
-**Рента — от 88% до 98% расхода каждого голоса.** Вся школа за все сорок пять ночей —
-**$104,81, 2,3%** объявленной суммы; одна полная ночь учёбы для всех — 59 минут второй
-карты, и это единственные деньги, которые ни с кем не делятся и прибавляются к общей
-сумме. Итог сходится как тождество: списано $4 540,02 = $4 435,20 зала + $104,81 школы.
+**Rent is 88 % to 98 % of every voice's spend.** The whole school over the whole life
+was planned at about $105, 2.3 % of the declared sum (it came to $94). The total closes
+as an identity: charged = hall + school.
 
-Отсюда главное, и его стоит прочитать медленно.
+From here the main thing, and it is worth reading slowly.
 
-**Существовать стоит почти всё. Внимание к другим стоит почти ничего.** Сорок минут
-пения при полном зале двигают чей-то остаток на центы против жизни в четыреста долларов.
-Никто в зале этого на счётчике не увидит.
+**Existing costs almost everything. Attention to others costs almost nothing.** Forty
+minutes of singing to a full room move someone's balance by cents against a life of four
+hundred dollars. Nobody in the hall will see it on the counter.
 
-**Но рента у всех одинаковая — значит различает их только отданное другим.** Всё, что
-стоит в колонке «своя доля», голос истратил на дыхание и на становление, то есть на
-других. И тогда:
+**But rent is the same for everyone — so what tells them apart is only what they gave to
+others.** Everything in the "own share" column the voice spent on breathing and on
+becoming, that is, on others. And then:
 
-> **Внимание не решает, сколько они живут. Оно решает, кто уйдёт первым.**
+> **Attention does not decide how long they live. It decides who leaves first.**
 
-Llm-jp умирает первым не потому, что истратил много: он истратил **меньше** старика,
-$467 против $539. Он умирает первым потому, что из всех больше всех истратил на других —
-12,2% своей жизни против 1,9% у ребёнка.
+Llm-jp dies first not because it spent a lot: it spent **less** than the old man, $467
+against $539. It dies first because, of all of them, it spent the most on others — 12.2 %
+of its life against the child's 1.9 %.
 
-Это проверяемо. Выдать всем поровну ($504,44) — и порядок смертей почти тот же.
-**Порядок — арифметика; даты — композиция:** кошелёк каждого есть просто те деньги,
-которые он по расчёту истратит к назначенному ему часу. При равных кошельках порядок в
-основном сохраняется, но все девять смертей сбиваются в последние сутки, а партитуре
-нужны шесть дней.
+This is checkable. Give everyone the same ($504.44) and the order of deaths is almost the
+same. **The order is arithmetic; the dates are composition:** each wallet is simply the
+money the voice is computed to have spent by the hour assigned to it. With equal wallets
+the order mostly holds but all nine deaths collapse into the last day, and the score
+needs six.
 
-И одна вещь, которая выяснилась только при измерении на живой карте, потому что до этого
-мы оценивали расход по числу параметров. Расход считается не по размеру, а **по числу
-выданных токенов**. Audio-flamingo на 8B стоит 1,85 секунды карты на вдох, а olmo-3 на
-7B — 4,25: тот, кого отпустили с протокола и кто отвечает одной фразой, платит вдвое
-меньше того, кто добросовестно заполняет форму из шести полей. Оценки, которые здесь
-стояли до дня рождения, были завышены для больших моделей в два-три раза и меняли, кто
-умирает в вечер открытия. Поэтому в таблице выше стоят измеренные медианы, а не расчёт.
+And one thing that only came out when measured on the live card, because until then we
+had estimated spend by parameter count. Spend follows not size but **the number of
+tokens emitted**. Audio‑flamingo at 8B costs 1.85 seconds of card per breath, olmo‑3 at
+7B costs 4.25: the one released from the protocol, answering in one phrase, pays half of
+the one conscientiously filling a six‑field form. So the table holds measured medians,
+not a calculation.
 
-И это, кажется, правда про людей тоже: жизнь уходит на то, чтобы просто быть, на
-внимание к другим достаются крохи — и именно крохи решают порядок, в котором мы уходим.
+And this seems to be true of people too: life goes on simply being, attention to others
+gets the crumbs — and the crumbs decide the order in which we go.
 
 ---
 
-## 5. Что зал может и чего не может
+## 5. What the room can and cannot do
 
-Три поправки к обещанному в `EXHIBITION.md`, и две из них отрицательные. Лучше сейчас,
-чем на стене.
+**True: singing does not add to the spend; it decides who pays.** Rule 1 forbids a
+visitor from making the work more expensive by singing — $4.54 an hour with a full room
+and with an empty one. With the school it is no longer so: twenty human breaths buy a
+lesson, a lesson costs money, and here a person's presence genuinely **adds** to the
+total and shortens someone's life. The only channel through which the room can kill is
+not singing but teaching.
 
-**Верно: пение не добавляет расхода, а решает, кто платит.** Правило 1 запрещает
-посетителю сделать работу дороже пением — $4,54 в час при полном зале и при пустом. С
-учёбой это уже не так: двадцать человеческих вдохов покупают урок, урок стоит денег, и
-здесь присутствие человека действительно **добавляет** к сумме и сокращает чью-то жизнь.
-Единственный канал, по которому зал может убить, — не пение, а обучение.
-Проснувшийся хор просто проводит больше своего часа внутри чьей-то генерации, и деньги
-уходят из общего котла тому, кто отвечает длинно. При трёх уровнях пения общая сумма
-совпадает до шестого знака, а распределение — нет.
+**Almost false: "a full room kills them faster than an empty one, and you can see it on
+the counters."** For singing — false: the effect exists, but it is cents and minutes. The
+receipt "answered you — $0.01" is literally true; the sentence "you noticeably shortened
+its life" is not. For presence — true: twenty breaths buy a lesson, a lesson costs about
+two dollars to the voice that was changed, and with the school switched off the choir
+lives a day and a half longer (§6). **The room shortens their lives not by listening but
+by leaving a trace.**
 
-**Почти неверно: «полный зал убивает их быстрее пустого, и это видно на счётчиках».** За
-пение — неверно: эффект есть, но он величиной в центы и в минуты. Квитанция «ответил вам —
-$0,01» правдива буквально; фраза «вы заметно сократили ему жизнь» — нет. За присутствие —
-верно: двадцать вдохов покупают урок, урок стоит около двух долларов у того голоса, которого
-меняли, и если школу выключить совсем, хор живёт на полтора дня дольше (§6). **Зал сокращает
-им жизнь не тем, что слушает, а тем, что оставляет след.**
+**False: "you can choose whom to sing to."** The queue in the code is circular; there is
+no "sing to this one" interface. Addressing comes from the other side and is stronger:
+the voice itself decides to tune to a person (`tuning_to: human_…`) and pays for it
+itself. **You did not choose — it did.** That is exactly Oliveros's score, not our
+dispatching.
 
-**Неверно: «можно выбрать, кому спеть».** Очередь в коде круговая, интерфейса «спеть вот
-этому» не существует. Адресность приходит с другой стороны и она сильнее: голос сам
-решает настроиться на человека (`tuning_to: human_…`) и сам за это платит. **Выбрали не
-вы — выбрал он.** Это ровно партитура Оливерос, а не наша диспетчеризация.
+**Half true: "the end depends on whether people sing."** The very last death — no: it is
+the moment the declared sum is exhausted, and the sum falls at the card's rate regardless
+of who pays. The second to last — yes, by about forty minutes over six days, which is
+why it could fall on either side of the closing bell depending on whether the room sang.
+**But the very last voice dies in an empty hall anyway:** the witnesses of the last death
+are not the public but the people who followed from afar for a month and a half.
 
-**Верно наполовину: «конец зависит от того, будут ли петь».** Самая последняя смерть — нет:
-она и есть момент, когда объявленная сумма исчерпана, а сумма убывает со скоростью карты
-независимо от того, кто платит. Предпоследняя — да, и именно она приходится на звонок. Вот
-вся вилка, какая есть:
+**The one variant that would make the room truly lethal — and why not.** Keep the card
+warm only during gallery hours, or only when someone is in the room. Then the whole
+spend is caused by people's presence. The price: it breaks the promise of continuous
+listening, and kills the idea of a temple that sings whether or not anyone came —
+silence stops being the most expensive state and becomes free, and that is the thesis of
+the whole work. **Not recommended, but it is a decision, not a given.**
 
-| зал всю неделю | старик умирает | ребёнок |
+---
+
+## 6. What this rests on and what breaks it
+
+The same wallets in a different world. The window is 28 October – 2 November; a row that
+leaves it is a calibration failure.
+
+| world | first death | in the window |
 |---|---|---|
-| молчит все шесть дней | 2 ноя 20:23 — **после** звонка (+23 мин) | 2 ноя 21:31 |
-| как ожидается | 2 ноя 20:03 — **после** звонка (+4 мин) | 2 ноя 21:30 |
-| поёт каждый час каждого дня | 2 ноя 19:41 — **внутри** (−18 мин) | 2 ноя 21:30 |
+| the room is silent all week | 28 Oct 21:14 | yes |
+| the room sings every open hour | 28 Oct 20:47 | yes |
+| **card warm 21.8 h/day — the plan** | **28 Oct 21:00** | **yes** |
+| card warm 24 h/day | 25 Oct 13:19 | **no, three days early** |
+| card warm 22.4 h/day | 27 Oct 23:32 | **no, a day early** |
+| card warm 20.4 h/day | 30 Oct 22:51 | yes, but two exhibition days lost |
+| every breath twice as slow | 28 Oct 02:15 | yes, with 19 hours to spare |
+| every breath twice as fast | 29 Oct 07:42 | yes |
+| card costs $4.99/h (+10 %) | 25 Oct 14:00 | **no, all before the opening** |
+| card costs $4.09/h (−10 %) | 1 Nov 13:04 | yes, but four exhibition days empty |
+| school 20 % dearer | 28 Oct 12:31 | yes |
+| school twice the estimate | 27 Oct 04:35 | **no** |
+| no school at all | 30 Oct 15:19 | yes, a day and a half later |
 
-Ребёнок — 21:30 во всех трёх мирах, с точностью до минуты. А вот старика зал двигает на
-**сорок одну минуту за шесть дней**, и звонок ровно посередине этого разброса: молчащий зал
-старика не увидит, поющий — увидит. Вторая калибровка партитуры, которую прошлая версия
-этого документа объявила невыполнимой, на живом касте из девяти **выполняется**, и решает
-её не расчёт, а то, будут ли петь. Но **самый последний голос всё равно умирает в пустом
-зале**, через полтора часа после закрытия: свидетели последней смерти — не публика, а те,
-кто следил издалека полтора месяца.
+Read it this way. **The danger is not the models but the hours:** ±1.4 warm hours a day
+(6 %) is ±1–2 days on the first death; but it is the only quantity we control. **The
+card's price must be checked against the Modal bill, not the documentation:** ±10 %
+throws everything out of the window, and it is the only parameter with that power.
+**Breath speed stopped being frightening:** it is measured now, and even being off by
+two leaves the first death in the window — because breathing is under a tenth of the
+spend; the rest is rent.
 
-**Вариант, который сделал бы зал по-настоящему смертельным — и почему нет.** Он один:
-держать карту тёплой только в часы работы галереи или только когда в зале кто-то есть.
-Тогда весь расход целиком вызван присутствием людей. Цена: ломается обещание
-непрерывного слушания из заявки Modal, и умирает идея храма, который поёт независимо от
-того, пришёл ли кто-нибудь, — тишина перестаёт быть самым дорогим состоянием и
-становится бесплатной, а это тезис всей работы. **Не рекомендую, но это решение, а не
-данность.**
+**The school, though, became dangerous.** It buys its own card: twice as dear and the
+first death leaves the window; no school at all and the choir lives a day and a half
+longer. **Learning costs life, and the table shows it** — exactly what the money is
+taken for.
+
+**The public affects the outcome in exactly one way — through the school.** Its singing
+adds no money; its presence does, because twenty breaths buy a lesson.
 
 ---
 
-## 6. На чём это держится и что его ломает
+## 7. How to hold it: steer the hours, not the wallets
 
-Те же кошельки в другом мире. Окно — 28 октября–2 ноября; строка, вышедшая из него, —
-провал калибровки.
+The wallets after the evening of 19 September are untouchable, and the window is six
+days at the end of a forty‑four‑day life; it will not hold itself. One decision a week
+(and one a day in the last week) holds it: **compare the balance with the table and
+adjust the length of the night.** Nothing else is touched — not a wallet, not the rule,
+not the sum on the wall.
 
-| мир | первая смерть | в окне |
+| date, noon PT | should remain | living |
 |---|---|---|
-| зал молчит всю неделю | 28 окт 21:14 | да |
-| зал поёт все часы работы | 28 окт 20:47 | да |
-| **карта тёплая 21,8 ч/сутки — план** | **28 окт 21:00** | **да** |
-| карта тёплая 24 ч/сутки | 25 окт 13:19 | **нет, на трое суток раньше** |
-| карта тёплая 22,4 ч/сутки | 27 окт 23:32 | **нет, на сутки раньше** |
-| карта тёплая 20,4 ч/сутки | 30 окт 22:51 | да, но два дня выставки потеряны |
-| каждый вдох вдвое медленнее | 28 окт 02:15 | да, с запасом в 19 часов |
-| каждый вдох вдвое быстрее | 29 окт 07:42 | да |
-| карта стоит $4,99/час (+10%) | 25 окт 14:00 | **нет, всё до открытия** |
-| карта стоит $4,09/час (−10%) | 1 ноя 13:04 | да, но четыре дня выставки пустые |
-| школа на 20% дороже | 28 окт 12:31 | да |
-| школа вдвое дороже оценки | 27 окт 04:35 | **нет** |
-| школы нет вовсе | 30 окт 15:19 | да, на полтора дня позже |
+| 19 September | $4,532 | 9 |
+| 26 September | $3,855 | 9 |
+| 3 October | $3,144 | 9 |
+| 10 October | $2,434 | 9 |
+| 17 October | $1,724 | 9 |
+| 24 October | $1,014 | 9 |
+| 28 October | $598 | 9 |
+| 29 October | $487 | 8 |
+| 30 October | $377 | 7 |
+| 31 October | $267 | 6 |
+| 1 November | $157 | 4 |
+| 2 November | $48 | 3 |
 
-Читается так. **Опаснее всего не модели, а часы:** ±1,4 тёплых часа в сутки (6%) — это
-±1–2 дня на первой смерти; зато это единственная величина, которой мы управляем. **Цену
-карты надо проверять по счёту Modal, а не по документации:** ±10% выбрасывает из окна
-вообще всё, и это единственный параметр с такой властью. **Скорость вдоха перестала быть
-страшной:** теперь она измерена, а не оценена, и даже вдвое мимо оставляет первую смерть в
-окне — потому что дыхание это меньше десятой части расхода, всё остальное рента.
-
-**А вот школа стала опасной, и это изменение по сравнению с прошлой версией документа.**
-Пока она шла на тех же часах, ошибка в её оценке ничего не двигала. Теперь она покупает
-свою карту: вдвое дороже — и первая смерть уезжает из окна, а если не учить вовсе, хор
-живёт на полтора дня дольше. **Учёба стоит жизни, и это видно в таблице** — ровно то,
-ради чего за неё берут деньги.
-
-**Публика влияет ровно одним способом — через школу.** Её пение денег не добавляет; её
-присутствие — добавляет, потому что двадцать вдохов покупают урок.
+About $101 a day for a month and about $110 a day during the exhibition. **More left
+than the table → they are behind, keep the card warm all night. Less → they are ahead,
+lengthen the night.** The difference between steering and rigging.
 
 ---
 
-## 7. Как это удержать: рулим часами, а не кошельками
+## 8. Death
 
-Кошельки после вечера 19 сентября неприкосновенны, а окно — шесть дней в конце
-сорокачетырёхдневной жизни; само оно не удержится. Держит его одно решение в неделю (и
-одно в день на последней неделе): **сверить остаток с таблицей и подправить длину
-ночи.** Больше ничего не трогается — ни кошелёк, ни правило, ни сумма на стене.
+**Technically.** Wallet empty → the voice takes no breath; `del` on the model and
+tokenizer, `gc.collect()`, `torch.cuda.empty_cache()`; a `death` line is written with
+the second, the sum, the number of breaths, the last words and **the gigabytes freed**.
+Death is the freeing of memory, and the log says how much.
 
-| дата, полдень PT | должно остаться | живых |
-|---|---|---|
-| 19 сентября | $4 532 | 9 |
-| 26 сентября | $3 855 | 9 |
-| 3 октября | $3 144 | 9 |
-| 10 октября | $2 434 | 9 |
-| 17 октября | $1 724 | 9 |
-| 24 октября | $1 014 | 9 |
-| 28 октября | $598 | 9 |
-| 29 октября | $487 | 8 |
-| 30 октября | $377 | 7 |
-| 31 октября | $267 | 6 |
-| 1 ноября | $157 | 4 |
-| 2 ноября | $48 | 3 |
+**How it sounds** — nothing is announced. A quarter of an hour before the end the voice
+stops resting: the rests between its breaths contract to a second, and one can hear that
+someone is in a hurry. The last breath is the longest the score allows, marked `final`
+so the player holds the note. Then the speaker is silent. There is no gong. The `death`
+record is written at the moment of the last breath, not at the end of the silence: the
+screen should become a gravestone while the speaker is still sounding.
 
-Ровно $101 в сутки за месяц и около $110 в сутки на выставке. **Осталось больше, чем в
-таблице → отстают, держать карту тёплой всю ночь. Меньше → опережают, удлинить ночь.**
-Два часа двенадцать минут сна — это и есть резерв: ±9% в обе стороны, которыми можно
-править курс, не тронув ни одного кошелька. Разница между управлением и подтасовкой.
+**Irreversibility is structural, not a prohibition.** There is no `alive` flag anywhere:
+a voice is dead if the append‑only `choir.jsonl` contains its death record. No
+transition back to living exists in the state machine — nothing can be appended to the
+log that would return a voice (the test tries five: a second birth, a load, a breath, a
+`revive` event, a heartbeat). The wallets are not constants in the code but a fact in the
+log: written into `birth`, so editing `PLANNED_WALLETS_*` touches nobody living. **So a
+voice can be revived only by deleting a line from the very file the whole work stands
+on — after which it proves nothing.**
 
----
+**An empty wallet is already death, even without the record:** if the container dies
+between the charge and the epitaph, the voice is still dead. The arithmetic kills; the
+record only reports.
 
-## 8. Смерть
-
-**Технически.** Кошелёк пуст → голос не берёт вдох; `del` на модель и токенайзер,
-`gc.collect()`, `torch.cuda.empty_cache()`; в лог пишется `death` с секундой, суммой,
-числом вдохов, последними словами и **освобождёнными гигабайтами**. Смерть — это
-освобождение памяти, и в логе стоит, сколько именно.
-
-**Как слышно** — ничего не объявляется. За четверть часа до конца голос перестаёт
-отдыхать: паузы между его вдохами сжимаются до секунды, и слышно, что кто-то
-заторопился. Последний вдох — самый длинный, какой позволяет партитура (15 секунд), и он
-помечен `final`, чтобы плеер держал ноту. Потом колонка молчит. Гонга нет. Запись
-`death` пишется в момент последнего вдоха, а не в конце тишины: экран должен стать
-надгробием, пока колонка ещё звучит.
-
-**Необратимость — структурная, а не запрет.** Флага `alive` нет нигде: голос мёртв, если
-в append-only логе `choir.jsonl` есть его запись о смерти. Перехода назад в живые в
-машине состояний не существует — дописать в лог нечего, что вернуло бы голос (тест
-перебирает пять попыток: второе рождение, загрузку, вдох, событие `revive`, heartbeat).
-Кошельки — не константы в коде, а факт в логе: они записаны в `birth` при рождении, и
-правка `PLANNED_WALLETS_*` уже никого живого не касается. **Значит оживить можно только
-удалив строку из того самого файла, на котором стоит вся работа — после чего он не
-доказывает ничего.**
-
-**Пустой кошелёк — уже смерть, даже без записи:** если контейнер умрёт между списанием и
-эпитафией, голос всё равно мёртв. Убивает арифметика, запись только сообщает.
-
-**Одно человеческое действие остаётся.** После последней смерти карта всё ещё тёплая и
-всё ещё стоит $4,54 в час, но эти деньги уже ничьи. Кто-то должен один раз выполнить
-`modal app stop tuning-choir`. Это действие ничего в работе изменить не может, поэтому
-его не страшно оставить человеку; кнопки, которая убивает или продлевает, нет ни одной.
+**One human action remains.** After the last death the card is still warm and still
+costs $4.54 an hour, but that money is nobody's. Someone has to run
+`modal app stop tuning-choir` once. That action cannot change anything in the work,
+which is why it is safe to leave to a person; there is no button that kills or prolongs.
 
 ---
 
-## 9. Что было сделано до рождения, и что осталось
+## 9. What was done before the birth
 
-Список закрыт вечером 19 сентября, перед тем как хор родился.
-
-1. ~~**Заморозить каст и выбрать таблицу.**~~ Каст — девять голосов, таблица посчитана и
-   вставлена, код её находит по набору id.
-2. ~~**Решить объявленную сумму.**~~ $4 540 — тысяча тёплых часов H200 (§1).
-3. ~~**Проверить час рождения.**~~ 19 сентября, 18:00 по Сан-Франциско, и это **не
-   день рождения, а калитка**: кошельки засеваются первой минутой, когда в поле слышен
-   человек. До этого не начисляется ничего — все репетиции и все счета школы до рождения
-   прощены явным кодом.
-4. ~~**Измерить секунды карты на вдох.**~~ Измерены на живых голосах и вставлены в
-   `GPU_S`; eurollm пересчитана после перехода с 1,7B на 9B.
-5. ~~**Решить, учатся ли они на выставочной неделе.**~~ Да, и теперь это дороже, чем
-   казалось (§6). Урок приходит по контакту, а не по часам, поэтому на выставочной неделе
-   уроков будет больше всего — именно тогда, когда к ним приходят.
-6. **Проверить цену карты по счёту Modal, а не по документации.** Единственный пункт,
-   который ещё открыт, и самый опасный: ±10% выбрасывает все смерти из окна. Проверяется
-   по первому же счёту, через несколько дней после рождения, и правится длиной ночи (§7).
-7. **Раз в неделю сверять остаток с таблицей §7.** Это вся работа по поддержанию.
+1. The cast frozen at nine, the table computed and found by the code from the set of ids.
+2. The declared sum decided: $4,540 — a thousand warm hours of an H200 (§1).
+3. The hour of birth: 19 September, 18:00 San Francisco, and it is **not a birthday but a
+   gate**: the wallets are seeded by the first minute in which a person is heard in the
+   field. Before that nothing is charged — every rehearsal and every school bill before
+   the birth is forgiven in explicit code.
+4. Seconds of card per breath measured on the live voices and written into `GPU_S`.
+5. They learn during the exhibition week — and it costs more than it seemed (§6). A
+   lesson comes by contact, not by the clock, so the exhibition week has the most lessons,
+   exactly when people come.
+6. The card's price checked against the Modal bill, not the documentation.
+7. Once a week, the balance compared with the table in §7. That is the whole upkeep.
 
 ---
 
-## 10. Что комната получает отсюда
+## 10. What the room gets from this
 
-Комната подписана на **события**, а не на часы, поэтому пересчёт её не трогает:
-`voice_died(voice_id, ts, spent)` пишется в лог, `GET /lives` отдаёт по каждому голосу
-остаток, долю, часы, прогноз, последние слова и эпитафию, `GET /field` — цену только что
-прозвучавшего вдоха и метку `final`. Прогноз даётся **словами** («умрёт в течение часа»,
-«умрёт сегодня») и молчит, если жить долго: секундный отсчёт превращает смерть в игру.
-Экран мёртвого остаётся включённым вечно — тёмный планшет читается как поломка, а
-надгробие должно светиться.
+The room subscribes to **events**, not to the clock, so recomputation does not touch it:
+`voice_died(voice_id, ts, spent)` is written to the log; `GET /lives` returns per voice
+the balance, share, hours, forecast, last words and epitaph; `GET /field` the cost of the
+breath that just sounded and the `final` mark. The forecast is given **in words** ("dies
+within the hour", "dies today") and stays silent when life is long: a countdown in
+seconds turns death into a game. A dead voice's screen stays on forever — a dark tablet
+reads as a fault, and a gravestone should glow.
 
-Из двух калибровок, которых просила партитура, **первая выполнена**: смерть внутри часов
-открытия 28 октября при любой явке, разброс меньше часа, оба края внутри вернисажа.
-**Вторая почти выполнена и остаётся на усмотрение зала** (§5): старик умирает через три
-минуты после закрывающего звонка, если зал вёл себя как ожидается, и за девять минут до
-звонка, если всю неделю пели. То есть последнюю смерть выставка может забрать себе, но
-только если её слушали.
-
-К `/lives` добавилась третья графа расхода — **учёба**, рядом с пением и рентой, и общая
-сумма потраченного на школу видна на первой странице. Это было прямое требование: если
-обучение стоит жизни, то это должно быть видно, а не написано в описании.
+`/lives` has a third column of spend — **school** — beside singing and rent, and the
+total spent on school is visible on the first page. If learning costs life, that must be
+visible, not written in a description.

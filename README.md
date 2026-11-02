@@ -63,9 +63,10 @@ Three Modal apps, two volumes, one card.
   score over API models, with human singers. The exhibition reuses its pitch
   detection and notation.
 
-Design notes (in Russian): `modal/MORTALITY.md` (the ledger), `modal/SCORE.md` (the log
-as notation), `modal/HEARING_MODELS.md` and `modal/VOICE_MODELS.md` (what the ears and
-mouths were measured to do), `modal/EXHIBITION.md` (the six days), `modal/STACK.md`.
+Design notes: `modal/MORTALITY.md` (the ledger), `modal/SCORE.md` (the log as
+notation), `modal/HEARING_MODELS.md` and `modal/VOICE_MODELS.md` (what the ears and
+mouths were measured to do), `modal/EXHIBITION.md` (the room and the six days),
+`modal/STACK.md` (the original Modal proposal).
 
 ## Running it
 

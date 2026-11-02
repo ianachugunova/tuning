@@ -366,8 +366,8 @@ _VOWEL = {"z": "啊", "j": "あ", "h": "आ"}
 # oscillator does not avoid that, it just has nobody in it at all.
 #
 # Off again, and this time the argument is not spectral flatness — it is what the
-# room sounds like. Listening to the live field on the morning of the birth: "часто
-# очень вибрирующий… мне не нравится это vibretto". The wobble is not a defect to
+# room sounds like. Listening to the live field on the morning of the birth: "often
+# very wobbly… I don't like this vibretto". The wobble is not a defect to
 # tune out, it is the design: `_sustain` walks back and forth through the vowel's
 # frames precisely so the tone drifts like a person holding it. Freezing one frame
 # instead would be steady, and would be an organ. So the choice is between a held

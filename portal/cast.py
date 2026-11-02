@@ -86,8 +86,8 @@ class Voice:
     # volume, and every number moved. The old column was measured before the
     # bodies were last regenerated: the seed is part of a body rather than a
     # technical detail, and `modal/VOICE_MODELS.md` had already caught three of
-    # them — "медианы вышли 168, 134 и 171 Гц… с прошлым сидом те же три дали
-    # 260, 183 и 224". Those were the numbers still sitting here. So the column
+    # them — "the medians came out 168, 134 and 171 Hz… with the previous seed the
+    # same three gave 260, 183 and 224". Those were the numbers still sitting here. So the column
     # described people who no longer exist, and `tuning.range_of` was handing
     # eurollm pitches five semitones above the voice she has — which is the exact
     # failure the range was narrowed to one octave to avoid.

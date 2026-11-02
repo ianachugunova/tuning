@@ -7,7 +7,7 @@
 The live log cannot say whether a voice learned, because every generation of
 adapters sang in a different room: people one day, nobody the next, and a fresh
 roll of the dice on every breath. The exam holds the room still. See
-`exam_metrics.py` for what is measured and `modal/EXAM.md` for why.
+`exam_metrics.py` for what is measured.
 
 The questions are frozen once into `/field/exam/probes.json` and reused: an exam
 whose questions change is not an exam. Only the "fresh" set is rebuilt each run,
@@ -381,33 +381,33 @@ def _hearing_lines(b: dict | None, a: dict | None) -> list[str]:
         return []
     def cents(x):
         return "—" if x.get("cents_median") is None else f"{x['cents_median']:.0f}¢"
-    return [f"- слух, из {b.get('tunes', 0)} → {a.get('tunes', 0)} настроек назвал ноту: "
-            f"{_pct(b.get('named'))} → {_pct(a.get('named'))}; промах: "
-            f"{cents(b)} → {cents(a)}; в четверть тона: "
+    return [f"- hearing, out of {b.get('tunes', 0)} → {a.get('tunes', 0)} tunes it named the note: "
+            f"{_pct(b.get('named'))} → {_pct(a.get('named'))}; miss: "
+            f"{cents(b)} → {cents(a)}; within a quarter tone: "
             f"{_pct(b.get('hit'))} → {_pct(a.get('hit'))}"]
 
 
 def write_report(rows: list[dict], moments: dict, path: Path) -> None:
     """A page Iana can read: choices per word over lessons, then the tickets."""
-    lines = [f"# Экзамен · {time.strftime('%Y-%m-%d %H:%M')}", "",
-             "**Выбор на слово** — между сколькими словами голос в среднем колеблется, "
-             "отвечая так, как он на самом деле ответил. Меньше — значит, урок сделал этот "
-             "ответ для него своим. «С людьми» — его настоящие ответы, когда в поле были "
-             "люди; «один» — когда людей не было; «новое» — то, что он спел после "
-             "последнего урока, и чего ни один урок не видел.", "",
-             "Билеты — замороженное поле в эти моменты (UTC): " + ", ".join(
+    lines = [f"# Exam · {time.strftime('%Y-%m-%d %H:%M')}", "",
+             "**Choices per word** — how many words, on average, the voice hesitates between "
+             "while answering the way it actually answered. Fewer means the lesson made that "
+             "answer its own. \"With people\" — its real answers when people were in the field; "
+             "\"alone\" — when nobody was; \"fresh\" — what it sang after the last lesson, "
+             "which no lesson has seen.", "",
+             "Tickets are the field frozen at these moments (UTC): " + ", ".join(
                  f"{k} {time.strftime('%d.%m %H:%M', time.gmtime(v))}"
                  for k, v in moments.items() if v) + ".", ""]
     for r in rows:
         if "error" in r:
             lines += [f"## {r.get('model_short', r.get('voice_id'))}", "",
-                      f"не сдал: {r['error']}", ""]
+                      f"did not sit it: {r['error']}", ""]
             continue
         lines += [f"## {r['model_short']}", "",
-                  "| | без уроков | " + " | ".join(_when(s["state"]) for s in r["states"][1:]) + " |",
+                  "| | no lessons | " + " | ".join(_when(s["state"]) for s in r["states"][1:]) + " |",
                   "|---|---|" + "---|" * (len(r["states"]) - 1)]
-        for key, label in (("with_people", "с людьми"), ("alone", "один"),
-                           ("fresh", "новое")):
+        for key, label in (("with_people", "with people"), ("alone", "alone"),
+                           ("fresh", "fresh")):
             lines.append(f"| {label} | " + " | ".join(
                 _fmt(s[key]["choices"]) for s in r["states"]) + " |")
         lines.append("")
@@ -416,15 +416,15 @@ def write_report(rows: list[dict], moments: dict, path: Path) -> None:
             if "error" in b or "error" in a:
                 lines.append(f"*{ticket}*: {b.get('error') or a.get('error')}")
                 continue
-            lines += [f"**Билет «{ticket}»**, по {b.get('takes', 0)} вдохов: без уроков → с уроками",
-                      f"- разных ответов: {_pct(b.get('different'))} → {_pct(a.get('different'))}",
-                      f"- самая частая фраза: {_pct(b.get('top_line'))} → {_pct(a.get('top_line'))}"
-                      f" («{a.get('top_line_text', '')[:80]}»)",
-                      f"- дословно из его прошлого: {_pct(b.get('from_its_past'))} → {_pct(a.get('from_its_past'))}",
-                      f"- тянется к человеку: {_pct(b.get('to_a_person'))} → {_pct(a.get('to_a_person'))}",
+            lines += [f"**Ticket \"{ticket}\"**, {b.get('takes', 0)} breaths each: no lessons → with lessons",
+                      f"- distinct answers: {_pct(b.get('different'))} → {_pct(a.get('different'))}",
+                      f"- most frequent line: {_pct(b.get('top_line'))} → {_pct(a.get('top_line'))}"
+                      f" (\"{a.get('top_line_text', '')[:80]}\")",
+                      f"- verbatim from its own past: {_pct(b.get('from_its_past'))} → {_pct(a.get('from_its_past'))}",
+                      f"- reaches for a person: {_pct(b.get('to_a_person'))} → {_pct(a.get('to_a_person'))}",
                       *_hearing_lines(b.get("hearing"), a.get("hearing")),
-                      f"- без уроков: «{(b.get('samples') or [''])[0][:100]}»",
-                      f"- с уроками: «{(a.get('samples') or [''])[0][:100]}»", ""]
+                      f"- no lessons: \"{(b.get('samples') or [''])[0][:100]}\"",
+                      f"- with lessons: \"{(a.get('samples') or [''])[0][:100]}\"", ""]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

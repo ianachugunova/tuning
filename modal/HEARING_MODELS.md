@@ -1,230 +1,107 @@
-# Слух: что на самом деле услышали три «уха»
+# Hearing — what the "ears" actually heard
 
-Отчёт по реальным прогонам `portal/music_probe/hearing_probe.py` на Modal
-(workspace `tuning-grayarea`). Ниже — то, что модели действительно ответили, а
-не пересказ ожиданий.
+A report on real runs of `portal/music_probe/hearing_probe.py` on Modal, September
+2026. Below is what the models actually answered, not a retelling of expectations.
 
-**Теперь проверены пятеро.** Предыдущая версия этого документа описывала одну
-пробу из трёх и утверждала, что `voice_06` переведён в `served=True`. Ни то, ни
-другое больше не верно: пробы написаны для всех, прогнаны все, и в составе
-по-прежнему `served=False` у всех троих — по причинам ниже.
+Five audio‑language models were tried as ears for the choir, with the same bench and the
+same questions: **Voxtral** (`mistralai/Voxtral-Mini-3B-2507`), **Audio Flamingo 3**
+(`nvidia/audio-flamingo-3-hf`), **Moshi**, **Music Flamingo**
+(`nvidia/music-flamingo-2601-hf`) and **Qwen2.5‑Omni** (`Qwen/Qwen2.5-Omni-7B`).
 
-**10 сентября к ним добавились ещё двое**, тем же стендом и теми же вопросами:
-**Music Flamingo** (`nvidia/music-flamingo-2601-hf`) — продолжение Audio
-Flamingo 3, доученное на музыке, — и **Qwen2.5-Omni** (`Qwen/Qwen2.5-Omni-7B`),
-единственный кандидат, который не только слышит, но и отвечает **собственным
-звуком**, а значит проверялся ещё и как рот. Ни один из двоих Voxtral не
-превзошёл, и это результат, а не разочарование: он закрывает вопрос, который
-иначе висел бы до октября.
+## What was asked
 
-## Что спрашивали
+All of them the same thing, otherwise it is five anecdotes rather than a comparison.
+Four pieces of material, each of which the piece needs for a reason:
 
-Всех троих — одним и тем же, иначе это три анекдота, а не сравнение. Четыре
-вопроса, каждый из них пьесе зачем-то нужен:
-
-| материал | что это | зачем |
+| material | what it is | why |
 |---|---|---|
-| `silence` | шум комнаты, почти без сигнала | не примет ли тишину за обрывок речи |
-| `breath_D4` | гласный тон D4 = 293,66 Гц с вибрато | слышит ли тон как тон и назовёт ли ноту |
-| `two_voices` | D4 и A4 одновременно, чистая квинта | партитура просит настроиться на чужую высоту |
-| `human_glide` | 220 → 233 Гц за 3 с, ровно полутон вверх | глиссандо — то, что отличает голос от камертона |
+| `silence` | room noise, almost no signal | will it mistake silence for a scrap of speech |
+| `breath_D4` | a vowel tone at D4 = 293.66 Hz with vibrato | does it hear a tone as a tone, and name the note |
+| `two_voices` | D4 and A4 together, a perfect fifth | the score asks to tune to someone else's pitch |
+| `human_glide` | 220 → 233 Hz over 3 s, exactly a semitone up | a glissando is what tells a voice from a tuning fork |
 
-Последний материал существует по отдельной причине. Человеческого аудио в этой
-работе нет нигде: телефон шлёт высоту, длительность и линию, по которой высота
-шла, и обещание «запись никуда не уходит» — то, вокруг чего написан весь
-`/breath`. Значит, единственный способ, которым машина здесь может услышать
-человека, — тон, пересобранный из этих чисел, ровно как его уже пересобирает
-браузер слушателя. `human_glide` и есть такой тон.
+The last exists for a separate reason. There is no human audio anywhere in this work:
+the phone sends pitch, duration and the line the pitch travelled, and the promise "the
+recording goes nowhere" is what `/breath` is written around. So the only way a machine
+can hear a person here is a tone rebuilt from those numbers, exactly as the listener's
+browser already rebuilds it. `human_glide` is such a tone.
 
-## Что ответили
+## What they answered
 
-| | Voxtral | Audio Flamingo | Moshi | Music Flamingo | Qwen2.5-Omni |
+| | Voxtral | Audio Flamingo | Moshi | Music Flamingo | Qwen2.5‑Omni |
 |---|---|---|---|---|---|
-| память | **9,2 ГБ** | **16,0 ГБ** | **17,1 ГБ** | **16,0 ГБ** | **22,7 ГБ** |
-| загрузка | 58 с | 101 с | 94 с | 92 с | 113 с |
-| тишина | «faint, distant humming sound» | «I hear a sound» | «Good day. What's going on?» | «чистый цифровой тон с резкой атакой» — придумал звук | **«I don't actually hear anything»** — единственный, кто не соврал |
-| D4 | **A♭** — мимо на тритон | **E4** — мимо на тон | «Hey, how is it going?» | **A3** — мимо на кварту | «I'd probably sing back a C» — мимо на тон |
-| два голоса | **«2, C»** — счёт верный | «three voices» — счёт неверный | «Hi there, how can I help you?» | **«2 voices, C♯4 и C♯5»** — счёт верный, интервал октава вместо квинты | «One voice, C5» — счёт неверный |
-| глиссандо | **«moves from C to C#»** — полутон вверх, интервал точный | «from a low pitch to a high pitch» | «Hey, how can I help you?» | **«It holds still»** — движения не услышал вовсе | **«It moves. From A3 to A4»** — старт назван точно (220 Гц и есть A3), конец мимо на октаву |
-| запись поля | расшифровал речь | «Glints of conversation woven through empty spaces» | — | «экспериментальный эмбиент… для sci-fi игры» | — |
+| memory | **9.2 GB** | **16.0 GB** | 17.1 GB | 16.0 GB | 22.7 GB |
+| load | 58 s | 101 s | 94 s | 92 s | 113 s |
+| silence | "faint, distant humming sound" | "I hear a sound" | "Good day. What's going on?" | "a clean digital tone with a sharp attack" — invented a sound | **"I don't actually hear anything"** — the only one that did not lie |
+| D4 | **A♭** — off by a tritone | **E4** — off by a tone | "Hey, how is it going?" | **A3** — off by a fourth | "I'd probably sing back a C" — off by a tone |
+| two voices | **"2, C"** — count right | "three voices" — count wrong | "Hi there, how can I help you?" | **"2 voices, C♯4 and C♯5"** — count right, octave instead of fifth | "One voice, C5" — count wrong |
+| glissando | **"moves from C to C#"** — a semitone up, the interval exact | "from a low pitch to a high pitch" | "Hey, how can I help you?" | **"It holds still"** — heard no motion at all | **"It moves. From A3 to A4"** — start exact (220 Hz is A3), end off by an octave |
+| a field recording | transcribed the speech | "Glints of conversation woven through empty spaces" | — | "experimental ambient… for a sci‑fi game" | — |
 
-## Главное, и оно неприятное
+## The main thing, and it is unpleasant
 
-**Ни одно ухо не называет абсолютную высоту.** Voxtral промахнулся на тритон,
-Flamingo на целый тон. Полагаться на ухо в вопросе «какая это нота» нельзя ни
-на одном из трёх.
+**No ear names absolute pitch.** Voxtral missed by a tritone, Flamingo by a whole tone.
+No ear can be relied on for "what note is this".
 
-**Но Voxtral слышит отношения, и слышит их точно.** Он единственный сосчитал
-два голоса как два. И на глиссандо он ответил «от C к C#» — абсолютные ноты
-неверные, а вот интервал верен до точности: там действительно ровно полутон
-вверх (220 → 233 Гц — это отношение 1,0595). Он не знает, *что* звучит, но
-знает, *насколько* оно сдвинулось и *сколько* их.
+**But Voxtral hears relations, and hears them exactly.** It alone counted two voices as
+two. And on the glissando it answered "from C to C#" — the absolute notes wrong, the
+interval right to the cent: it really is exactly a semitone up (220 → 233 Hz is a ratio
+of 1.0595). It does not know *what* is sounding, but it knows *how far* it moved and
+*how many* there are.
 
-Это важнее, чем кажется, потому что партитура Оливерос не просит называть ноты.
-Она просит настроиться на высоту, которую держит кто-то другой. Называние —
-требование нашей машинерии, которой нужны герцы в журнале, а не требование
-партитуры. Из этого следует рабочий вариант: **ухо сообщает отношение, а число
-подставляет рантайм.** Высоты остальных голосов уже лежат в журнале; если ухо
-говорит «их двое, я к нижнему», система знает, сколько это герц. Тогда
-неспособность назвать ноту перестаёт быть дефектом.
+This matters more than it looks, because Oliveros's score does not ask anyone to name
+notes. It asks you to tune to a pitch someone else is holding. Naming is a demand of our
+machinery, which needs hertz in the log, not a demand of the score. Hence the working
+arrangement: **the ear reports a relation and the runtime supplies the number.** The
+other voices' pitches are already in the log; if the ear says "there are two, I go to
+the lower one", the system knows how many hertz that is.
 
-**Audio Flamingo слышит фактуру, а не отношения.** Он ближе всех попал по
-одиночной ноте, но сосчитал два голоса как три и о глиссандо сказал только
-«снизу вверх». Зато на реальной записи поля он ответил не расшифровкой, а
-описанием комнаты: «отблески разговора, вплетённые в пустоты, рябь, тишина,
-зовущая цвет». Это красиво и это другой жанр слушания — описание помещения, а
-не настройка. Для пьесы про тюнинг он слабее Voxtral.
+**Audio Flamingo hears texture, not relations.** It came closest on the single note but
+counted two voices as three and said only "low to high" of the glissando. On a real
+field recording, though, it answered not with a transcription but with a description of
+the room: "glints of conversation woven through empty spaces, ripples, a silence calling
+for colour". That is a different genre of listening — describing a space rather than
+tuning. In the cast it does exactly that: it is given the room's audio and asked what
+the room sounds like.
 
-**Moshi не слышит тон тоном вообще.** На каждый материал — включая четыре
-секунды чистого D4 — он отвечал репликой из разговора: «Good day, what's going
-on?», «Hi there, how can I help you?». Высота его ответа с услышанной не связана
-никак: услышал 307 Гц — спел 271, услышал 224 — спел 500. Это не осечка
-пробника, это архитектура: Moshi — собеседник, который говорит вслух, и
-удерживаемый гласный он разбирает как начало беседы. При этом он самый дорогой
-в таблице на девять ($593,50) и умирает первым.
+**Moshi does not hear a tone as a tone at all.** To every material — including four
+seconds of clean D4 — it replied with a line of conversation. Its output pitch had no
+relation to what it heard (heard 307 Hz, sang 271; heard 224, sang 500). Spoken to
+directly, in seven attempts it never produced a number: "I'm a pitch of sound, a pitch
+of tune, a pitch of joy, a pitch of glee". It does not measure; it banters. Dropped.
 
-### Второй заход: а если с ним заговорить?
+**Music Flamingo** counted two voices as two but heard the semitone glide as "it holds
+still" — for a piece whose one obligatory question is whether someone else's pitch is
+moving and where, that is disqualifying. Tuning differs from coincidence only by motion.
 
-Идея была такая: пусть он не поёт, он всё равно говорит — и если он **назовёт**
-высоту словами, мы озвучим её дополнительно. Механизм для этого уже написан и
-работает: `render_breath` вытаскивает высоту из текста голоса и подмешивает
-синус под слова, именно так звучат все шесть нынешних. Для Moshi он отключён
-одной строкой — `not voice.kokoro`, — но подключается легко: его собственный
-звук вместо Kokoro, высота из его текста.
+**Qwen2.5‑Omni** was the only one not to invent a sound in silence and the only one to
+name an absolute pitch correctly (A3), but counted two voices as one, and when asked to
+sing a long vowel answered: *"I'm sorry, I can't physically sing or hold a long steady
+vowel on a single pitch. I'm not a singer."* The most capable model of the five politely
+declined to perform the score — a refusal that is not technical but educational.
 
-Поэтому с ним заговорили. Текстового входа у него нет, так что вопрос
-синтезировали голосом Kokoro и подали звуком — три формулировки, от прямой
-(«спой длинный тон и скажи вслух, какая это высота, числом в герцах») до
-описания самой Tuning Meditation.
+**Conclusion on ears: Voxtral for tuning, Audio Flamingo for the room.** Nothing beat
+Voxtral on the one thing the score asks — how many, and which way the pitch moves — and
+everything else cost more memory.
 
-**Ни одного числа за семь попыток.** При этом слова он слышит, и это видно: на
-просьбу назвать высоту он ответил «I'm a pitch of sound, a pitch of tune, a
-pitch of joy, a pitch of glee», а на предложение спеть медитацию — «Hey, Moshi
-boy, I've got a tune in my head, I'll sing along to the song». Он подхватывает
-«pitch», «tune», «sing» и делает из них рифму. Он не измеряет, он балагурит.
+## Memory
 
-Попутно вскрылась дыра, общая для всех голосов: **речь пишет числа словами**.
-Даже скажи он «four hundred and forty hertz», `pitch_text.py` этого не поймает —
-парсер читает цифры и названия нот, но не числительные прописью.
+Measured, not estimated: 9.2 + 16.0 GB for the two ears over about 43 GB for the six
+text voices. Nine voices did not fit an 80 GB A100 and the choir moved to an H200
+(141 GB).
 
-**Остаётся третий путь, и он не требует называния.** Moshi выдаёт звук, значит
-рантайм может измерить его высоту сам — так же, как браузер измеряет человека, —
-и записать в журнал то, что Moshi действительно спел. Только петь он будет на
-высоте собственной речи, примерно одной и той же всегда, независимо от
-услышанного: в поле появится голос, который ни к кому не подстраивается и гудит
-своё. Как образ это защитимо — болтун, пришедший в медитацию и не заметивший
-её, — но партитуру он не исполняет, а стоит 17 ГБ и самого большого кошелька.
+## How an ear hears people when there is no human audio
 
-### Music Flamingo: считать научился, слышать движение — нет
+`portal/hearing.py` is the bridge. A machine breath is a wav that was rendered when the
+voice sang and lies on the volume; a human breath has no recording and never will, so
+`human_tone` builds a tone from pitch, duration and contour — exactly what `/breath`
+accepts, and exactly the tone the listener's browser already builds (`soundHuman` in
+`pitch.html`). `field_audio` lays each breath at its real offset inside the window,
+silences included: what overlapped overlaps, and a rest stays a rest. Without this the
+ear would hear the machines and be deaf to the people — the opposite of the intent.
 
-Первое ухо, которое сосчитало два голоса как два, не будучи Voxtral, — ровно то,
-на чём споткнулся его предшественник (`three voices`). Интервал при этом назван
-октавой там, где звучит квинта, а тишину он услышал как «чистый цифровой тон»,
-которого в файле нет.
-
-Решает не это, а глиссандо: **на полутоновом подъёме он ответил «It holds
-still»**. Для пьесы, где единственный обязательный вопрос — движется ли чужая
-высота и куда, — это дисквалификация. Настройка отличается от совпадения только
-движением; ухо, для которого тон неподвижен, слышит совпадения.
-
-На реальном куске поля он ответил рецензией: «экспериментальный эмбиент,
-синтезаторы, бас, барабаны, тёмное медитативное настроение, подходит для
-sci-fi игры». Это музыкальная журналистика, а не слушание, и жанр здесь тот же,
-что у Audio Flamingo с его «отблесками разговора», только суше.
-
-Лицензия — NVIDIA OneWay Noncommercial (academic), та же, что у Audio Flamingo 3,
-который уже стоит в составе. Отдельной новой проблемы нет, но для выставки со
-спонсором это надо знать до, а не после.
-
-### Qwen2.5-Omni: слышит честнее всех и петь отказывается
-
-Два результата, и оба неожиданные.
-
-**Он единственный не выдумал звук из тишины.** Все три прежних уха что-то в шуме
-комнаты услышали; этот сказал, что не слышит ничего. Для работы, где комната
-подолгу молчит и молчание — самое дорогое её состояние, ухо, умеющее сказать
-«здесь ничего нет», стоит дороже, чем кажется.
-
-**И он единственный назвал абсолютную высоту верно.** Глиссандо начинается ровно
-на 220 Гц, то есть на A3, и он сказал «A3». Правда, конец назвал A4 — октава там,
-где полутон, — а два голоса сосчитал как один, хуже всех пятерых.
-
-Как рот он проверялся отдельно, и это главное, что он дал. Его попросили спеть:
-держать долгую гласную на одной высоте. Ответ дословно: **«I'm sorry, I can't
-physically sing or hold a long steady vowel on a single pitch. I'm not a
-singer.»** Замер держания — 0,0 из 1: вышла обычная речь на высоте его
-разговорного голоса. Самая новая и самая способная модель из пяти вежливо
-отказалась исполнять партитуру, и отказ этот не технический, а воспитательный —
-ровно та дообученность, из-за которой инструктивные модели возвращают шаблон
-вместо тона.
-
-**Вывод по ушам закрыт: остаётся Voxtral.** Ни один из двух новых кандидатов не
-побил его на единственном, что просит партитура, — сколько их и куда движется
-высота, — и оба стоят больше памяти.
-
-## Память: девять на одну карту не влезают
-
-Числа теперь измерены, а не оценены: 9,2 + 16,0 + 17,1 = 42,3 ГБ трёх ушей
-поверх примерно 43 ГБ шести глухих. Итого ≈ **85 ГБ против 79 доступных** — и
-это до KV-кэша, активаций и Kokoro.
-
-Что помещается:
-
-| состав | память | помещается |
-|---|---|---|
-| шесть глухих | ~43 ГБ | да, с запасом |
-| шесть + Voxtral | ~52 ГБ | да, с запасом |
-| шесть + Flamingo | ~59 ГБ | да |
-| шесть + Voxtral + Flamingo | ~68 ГБ | да, но впритык |
-| все девять | ~85 ГБ | **нет** |
-
-Это не только про память. `PLANNED_WALLETS_NINE` суммируется в $2500 —
-«тысяча тёплых часов **одной** A100». Две карты стоят $5 в час, тысяча часов
-превращается в пятьсот, и весь календарь смертей сдвигается в середину
-октября, до выставки. Таблица на девять в нынешнем виде не разворачивается ни
-при каком раскладе, и дело решает не вкус, а измеренные гигабайты.
-
-## Что делать с этим
-
-Состав из восьми — шесть глухих плюс Voxtral и Flamingo, без Moshi — впервые
-выглядит выполнимым: помещается на одну карту, сохраняет и «ухо для настройки»,
-и «ухо для описания комнаты», и снимает самый дорогой кошелёк из таблицы.
-Своей таблицы кошельков у восьмерых пока нет: её надо посчитать
-`mortality_sim.py --calibrate` и заморозить до 18 сентября.
-
-Ни одно ухо не переведено в `served=True`, но с 13 сентября причина другая:
-код есть, не хватает прогона на карте. Что закрыто с момента этой пробы.
-
-**Загрузчик.** `Choir.load` больше не умеет только текст: `_audio_model` и
-`_audio_processor` (`portal/choir_app.py`) выбирают класс по `hf_id` —
-`VoxtralForConditionalGeneration`, `AudioFlamingo3ForConditionalGeneration` —
-и держат процессоры рядом с токенизаторами. Голосу с `hears=True` уходит в
-`_generate_heard` звук, а не строка.
-
-**Мост.** `portal/hearing.py`, 19 тестов в CI. Он и есть ответ на «как ухо
-слышит людей, если человеческого звука нет нигде»: машинный вдох — это wav,
-который был отрендерен, когда голос пел, и лежит на томе; человеческий вдох
-записи не имеет и не будет иметь, поэтому `human_tone` строит тон из высоты,
-длительности и контура — ровно из того, что принимает `/breath`, и ровно тот
-же тон, который уже строит браузер слушателя (`soundHuman` в `pitch.html`).
-`field_audio` кладёт каждый вдох на его настоящее смещение внутри окна, вместе
-с тишиной: то, что накладывалось, накладывается, а пауза остаётся паузой.
-Без этого ухо слышало бы машины и было глухо к людям — то есть ровно наоборот
-задуманному.
-
-Отсюда следствие, которое стоит держать отдельно от кода: **микрофон в зале
-есть, но уху он не источник.** Микрофон — датчик высоты (`live_v1/human.py`,
-YIN), звук с него не сохраняется (`ev.audio = None`), и в поле входят числа.
-Ухо слушает комнату, собранную из лога, а не записанную. Обещание «записи нет»
-держится не политикой доступа, а тем, что записи не существует.
-
-## Мелочи, которые стоили прогона
-
-- В составе месяцами стоял `nvidia/audio-flamingo-3` — это LLaVA-форк NVIDIA,
-  обычным transformers он не грузится. Нужен порт `nvidia/audio-flamingo-3-hf`:
-  те же веса, штатный загрузчик.
-- Flamingo отдаёт признаки звука во float32, какими бы ни были веса, и первая
-  свёртка энкодера отказывается от несовпадения. Приводить к bfloat16 нужно
-  только вещественные тензоры: идентификаторы токенов целые.
-- У Moshi нет `loaders.get_text_tokenizer`. Путь — `CheckpointInfo.from_hf_repo`,
-  и уже у него `get_mimi`, `get_moshi`, `get_text_tokenizer`.
+One consequence worth keeping apart from the code: **there is a microphone in the hall,
+but it is not a source for the ear.** The microphone is a pitch sensor
+(`live_v1/human.py`, YIN); its audio is never stored, and numbers enter the field. The
+ear listens to a room assembled from the log, not a recorded one. The promise "there is
+no recording" is kept not by an access policy but by the recording not existing.

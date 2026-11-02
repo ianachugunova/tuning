@@ -1,81 +1,79 @@
-# Партитура — лог как нотный текст
+# The score — the log read as notation
 
-Работа не оставляет после себя весов. 2 ноября последний кошелёк пустеет, веса
-уходят с карты и удаляются — ничего из того, чем голоса стали за шесть недель, не
-сохраняется. Остаётся **партитура**: лог всего спетого, машинами и людьми, с 18
-сентября по 2 ноября, прочитанный как нотный текст.
+The work leaves no weights behind. When the last wallet empties the weights leave the
+card and are deleted — nothing of what the voices became over six weeks is kept. What
+remains is the **score**: the log of everything sung, by machines and by people, from
+18 September to the last death, read as a musical text.
 
-Это ставит работу в линию текстовых партитур Полины Оливерос и графических
-партитур Корнелиуса Кардью (*Treatise*): документ, который сам не звучит, но по
-которому можно играть. Партитуру можно исполнить кому угодно и когда угодно, и
-задуманная форма исполнения — **обмен**: люди поют партии, которые пели машины, а
-машины поют партии, которые пели люди. Партитура переживает всех, кто в ней есть.
+This places the work in the line of Pauline Oliveros's text scores and Cornelius
+Cardew's graphic scores (*Treatise*): a document that does not sound by itself but can
+be played from. The score can be performed by anyone, at any time, and the intended
+form of performance is an **exchange**: people sing the parts the machines sang, and
+machines sing the parts the people sang. The score outlives everyone in it.
 
-Отсюда единственное практическое следствие, и оно жёсткое: **лог — это уже не
-служебная запись, а само произведение, и его нельзя починить задним числом.** Что
-не записано в строку в момент вдоха, того в работе не будет. 3 декабря измерять
-будет нечего.
+One practical consequence follows, and it is strict: **the log is no longer a service
+record; it is the work itself, and it cannot be repaired after the fact.** Whatever is
+not written into the line at the moment of the breath will not be in the work.
 
-Код: `portal/score.py` (форма и чтение), `portal/score_render.py` (гравировка в
-текст), `portal/test_score.py` — **34 теста, в CI**. Пишут лог два места:
-`portal/choir_app.py` (машины) и `portal/portal_app.py` (люди).
-
----
-
-## 1. Два файла и их правила
-
-```
-/field/choir.jsonl    ← пишет только tuning-choir (машины + реестр смертности)
-/field/field.jsonl    ← пишет только tuning-portal (люди)
-/field/audio/*.wav    ← по одному файлу на озвученный машинный вдох
-/field/interpretations.json  ← личная партитура каждого голоса (см. §9)
-```
-
-Четыре правила, на которых держится всё остальное.
-
-1. **Только дозапись.** Ни усечения, ни перезаписи, ни сброса. Единственный
-   сброс — однократный, до 18 сентября: всё, что в файлах сейчас, это мы их
-   тестируем.
-2. **Один писатель на файл.** Том Modal ничего не обещает про двух контейнеров,
-   дописывающих один файл. Поэтому файлов два, а не один.
-3. **Порядок строк в файле — это хронология.** Он авторитетнее метки времени:
-   часы контейнера могут шагнуть назад при перезапуске, а порядок дозаписи — нет.
-   Реестр смертности читает файл именно в порядке строк (`mortality.replay`).
-4. **Партитура читается слева направо по `t`.** Два файла нельзя слить по порядку
-   строк, поэтому для чтения как музыки — и только для него — строки
-   сортируются по началу звука.
-
-Формат — JSON Lines: одна строка, один объект. Разбор одной битой строки (обрыв
-записи в момент падения контейнера) пропускается, остальное читается.
+Code: `portal/score.py` (the form and the reading), `portal/score_render.py`
+(engraving into text), `portal/test_score.py`. Two places write the log:
+`portal/choir_app.py` (machines) and `portal/portal_app.py` (people).
 
 ---
 
-## 2. Что нужно исполнителю, и где это лежит
+## 1. Two files and their rules
 
-| | машинный вдох | вдох человека |
+```
+/field/choir.jsonl           ← written only by tuning-choir (machines + the ledger)
+/field/field.jsonl           ← written only by tuning-portal (people)
+/field/audio/*.wav           ← one file per voiced machine breath
+/field/interpretations.json  ← each voice's personal score (see §9)
+```
+
+Four rules on which everything else rests.
+
+1. **Append only.** No truncation, no rewriting, no reset. The one reset was before the
+   birth: everything in the files until then was testing.
+2. **One writer per file.** A Modal volume promises nothing about two containers
+   appending to one file. Hence two files, not one.
+3. **Line order in the file is the chronology.** It outranks the timestamp: a
+   container's clock can step backwards on restart; append order cannot. The ledger
+   reads the file in line order (`mortality.replay`).
+4. **The score is read left to right by `t`.** Two files cannot be merged by line
+   order, so for reading as music — and only for that — the lines are sorted by the
+   onset of sound.
+
+Format is JSON Lines: one line, one object. A single broken line (a write cut off when a
+container died) is skipped; the rest is read.
+
+---
+
+## 2. What a performer needs, and where it lives
+
+| | machine breath | human breath |
 |---|---|---|
-| когда начался звук | `timestamp` | `started_ts` |
-| сколько звучал | `sound_s` | `sound_s` |
-| сколько длилась тишина до | `silence_before_s` + вывод | `own_rest_s` + вывод |
-| высота в герцах | `pitch_hz` | `pitch_hz` |
-| высота как нота | `pitch_note` + `pitch_cents` | то же |
-| **как** высота названа | `pitch_kind`: `note` / `hz` / `none` | `pitch_kind`: `sung` |
-| прозвучало ли на самом деле | `toned`, `spoke` | `voiced_fraction` |
-| что спето словами | `content` | `content` |
-| кто пел | `voice_id`, `model_short`, `tongue` | `voice_id`, `who: human` |
-| на кого настраивался | `action`, `tuning_to`, `tuning_to_id`, `heard` | не заявляется |
-| моменты смерти | `kind: "death"` | — |
+| when the sound began | `timestamp` | `started_ts` |
+| how long it sounded | `sound_s` | `sound_s` |
+| how long the silence before it lasted | `silence_before_s` + inference | `own_rest_s` + inference |
+| pitch in hertz | `pitch_hz` | `pitch_hz` |
+| pitch as a note | `pitch_note` + `pitch_cents` | the same |
+| **how** the pitch was named | `pitch_kind`: `note` / `hz` / `none` | `pitch_kind`: `sung` |
+| whether it actually sounded | `toned`, `spoke` | `voiced_fraction` |
+| what was sung in words | `content` | `content` |
+| who sang | `voice_id`, `model_short`, `tongue` | `voice_id`, `who: human` |
+| whom it tuned to | `action`, `tuning_to`, `tuning_to_id`, `heard` | not declared |
+| moments of death | `kind: "death"` | — |
 
-Из этого набора **длительность и тишина — единственное, без чего партитуру нельзя
-исполнить вообще.** Настроечная медитация состоит из тишины больше, чем из звука
-(в демонстрационном срезе — 89 % тишины). Партитура без пауз — это список
-высот, а не музыка.
+Of this set, **duration and silence are the only things without which the score cannot
+be performed at all.** The Tuning Meditation consists of silence more than of sound (the
+demonstration slice is 89 % silence). A score without rests is a list of pitches, not
+music.
 
 ---
 
-## 3. Строка машинного вдоха — поле за полем
+## 3. A machine breath — field by field
 
-`choir.jsonl`, `kind == "tone"`. Пример со всеми полями партитуры:
+`choir.jsonl`, `kind == "tone"`. An example with every score field:
 
 ```json
 {"timestamp": 1789000031.4, "voice_id": "voice_05", "model_short": "qwen3",
@@ -94,127 +92,121 @@
  "left_usd_before": 361.2}
 ```
 
-### Время и длительность
+### Time and duration
 
-- **`timestamp`** — начало вдоха: момент, когда голос закончил думать и вдох
-  вошёл в поле. Это и есть `t` партитуры. Рендер звука происходит на `render_s`
-  позже, а слышимое воспроизведение в зале — когда до него дойдёт плеер; ни то,
-  ни другое не является началом ноты в нотном смысле. Начало ноты — момент
-  входа в поле, и так это надо читать.
-- **`sound_s`** — сколько звук на самом деле длился, в секундах, измерено по
-  готовому wav. **Это не `breath_chosen_s`.** Голос выбирает длину вдоха, но тон
-  растягивается до длины произнесённых слов, поэтому любой вдох со словами звучал
-  дольше заявленного. До введения `sound_s` разница нигде не фиксировалась.
-  `sound_s == 0` — голос назвал тон и решил не звучать (`playback: "none"`); это
-  записанное молчание, а не пропуск, и его надо нотировать.
-- **`breath_chosen_s`** — длина, которую голос *попросил*. Оставлена: это его
-  намерение, и разница между намерением и звуком читается как факт о голосе.
-  Как длительность использовать нельзя; она нижняя граница.
-- **`toned`** / **`spoke`** — прозвучал ли тон и прозвучали ли слова. `playback`
-  — это замысел, эти два — факт. Различаются, когда синтезатор не смог
-  произнести строку или в строке не нашлось высоты.
+- **`timestamp`** — the onset of the breath: the moment the voice finished thinking and
+  the breath entered the field. This is the score's `t`. The audio is rendered
+  `render_s` later, and heard in the room when the player gets to it; neither is the
+  onset of the note in the musical sense. The note begins when it enters the field.
+- **`sound_s`** — how long the sound actually lasted, in seconds, measured on the
+  finished wav. **This is not `breath_chosen_s`.** The voice chooses a breath length,
+  but the tone is stretched to the length of the spoken words, so any breath with words
+  sounded longer than declared. `sound_s == 0` means the voice named a tone and chose
+  not to sound (`playback: "none"`): a recorded silence, not a gap, and it is notated.
+- **`breath_chosen_s`** — the length the voice *asked for*. Kept: it is the intention,
+  and the gap between intention and sound is a fact about the voice. Not usable as a
+  duration; a lower bound.
+- **`toned`** / **`spoke`** — whether the tone and the words actually sounded.
+  `playback` is the intent; these two are the fact. They differ when the synthesizer
+  could not pronounce the line or no pitch was found in it.
 
-### Тишина
+### Silence
 
-- **`silence_before_s`** — сколько поле молчало перед этим вдохом, по всем
-  голосам сразу: машинам и людям. Считается голосом, который слушал, от конца
-  последнего звучавшего события в объединённом поле (`choir_app.field_ends_at`).
-  `null` — поле не звучало ещё ни разу.
-- Значение измерено **до** генерации, поэтому если человек спел, пока голос
-  думал, записанное число больше настоящего промежутка. Это не ошибка: это то,
-  на что голос отвечал. Точная пауза выводится из объединённой хронологии (§6), и
-  `score.read()` кладёт выведенную в `rest_s`, а записанную — в `heard_rest_s`.
-  Два разных факта, оба нужны.
+- **`silence_before_s`** — how long the whole field was silent before this breath,
+  across machines and people. Measured by the listening voice from the end of the last
+  sounding event in the merged field (`choir_app.field_ends_at`). `null` means the field
+  had never sounded.
+- The value is measured **before** generation, so if a person sang while the voice was
+  thinking, the recorded number is larger than the real gap. That is not an error: it
+  is what the voice was answering. The exact rest is inferred from the merged
+  chronology (§6); `score.read()` puts the inferred value in `rest_s` and the recorded
+  one in `heard_rest_s`. Two facts, both needed.
 
-### Высота
+### Pitch
 
-- **`pitch_hz`** — частота, которая **действительно прозвучала**, в герцах.
-  Берётся из того же списка, из которого её берёт рендер, поэтому число в логе и
-  число в wav — одно число, а не два независимых мнения.
-- **`pitch_note`** — та же высота как имя ноты равномерного строя, A4 = 440.
-- **`pitch_cents`** — отклонение от этой ноты, −50…+50. Не округляется:
-  голос, сказавший «294 Hz», сказал не ровно D4, и человек, спевший 33 цента под
-  D♯4, сделал это нарочно.
-- **`pitch_label`** — как высота названа в тексте: `"D4"`, `"294Hz"`.
-- **`pitch_kind`** — **чем именно голос назвал высоту** (§4).
-- **`pitch_all`** — все высоты в строке, до четырёх. Прозвучала только первая;
-  остальное — жест, который голос написал («D4 then F4»).
-- **`pitch_asked_hz`**, **`pitch_asked_note`**, **`pitch_octaves`** — только на
-  тех строках, где высота, на которую голос отвечал, лежала вне его диапазона и
-  была перенесена в него **целыми октавами** (`tuning.fold_into`). Ребёнок держит
-  A5, старик отвечает A3, `pitch_octaves: -2`.
+- **`pitch_hz`** — the frequency that **actually sounded**. Taken from the same list the
+  renderer uses, so the number in the log and the number in the wav are one number.
+- **`pitch_note`** — the same pitch as an equal‑temperament note name, A4 = 440.
+- **`pitch_cents`** — deviation from that note, −50…+50. Not rounded: a voice that said
+  "294 Hz" did not say exactly D4, and a person who sang 33 cents under D♯4 did so on
+  purpose.
+- **`pitch_label`** — how the pitch was named in the text: `"D4"`, `"294Hz"`.
+- **`pitch_kind`** — **what exactly the voice named** (§4).
+- **`pitch_all`** — every pitch in the line, up to four. Only the first sounded; the
+  rest is a gesture the voice wrote ("D4 then F4").
+- **`pitch_asked_hz`**, **`pitch_asked_note`**, **`pitch_octaves`** — only on lines
+  where the pitch the voice answered lay outside its range and was moved into it by
+  **whole octaves** (`tuning.fold_into`). The child holds A5, the old man answers A3,
+  `pitch_octaves: -2`.
 
-  Три поля, а не одно, потому что здесь единственное место, где рантайм меняет
-  число, выбранное голосом, и проверяемость этого — условие, на котором это
-  вообще разрешено. Октава — единственный интервал, на котором высота не
-  меняется: бас, отвечающий сопрано, поёт её ноту, и в любом хоре, где есть оба,
-  это унисон, а не уступка. Но именно поэтому без второго числа **нельзя
-  отличить унисон от переноса** — а «хор сошёлся» это главное утверждение всей
-  работы. `pitch_hz` остаётся тем, что прозвучало; `pitch_asked_hz` — тем, на что
-  отвечали. Отсутствие полей значит, что не переносили: так большинство строк
-  чистые, и те, где перенос был, видно взглядом.
+  Three fields rather than one because this is the only place where the runtime changes
+  a number the voice chose, and its being checkable is the condition on which that is
+  allowed at all. The octave is the one interval across which a pitch does not change:
+  a bass answering a soprano sings her note, and in any choir with both it is a unison,
+  not a concession. But that is exactly why, without the second number, **a unison
+  cannot be told from a transposition** — and "the choir converged" is the main claim
+  of the whole work. `pitch_hz` stays what sounded; `pitch_asked_hz` is what was
+  answered. Absent fields mean nothing was moved.
 
-  Диапазон голоса берётся не из общего окна, а из его собственного тела:
-  `speaks_at_hz` в `cast.py` — измеренная основная частота той речи, которой этот
-  голос говорит, — три полутона ниже и две октавы вверх. Регистр в этом касте
-  несёт **возраст** и только его: два самых низких — те двое, что описаны
-  пожилыми мужчинами, самый высокий — ребёнок. Язык живёт в `tongue` и
-  `first_words` и на регистр не влияет: итальянского регистра не существует.
+  A voice's range comes not from a shared window but from its own body: `speaks_at_hz`
+  in `cast.py` — the measured fundamental of the speech that voice speaks with — three
+  semitones below and two octaves up. Register in this cast carries **age** and only
+  age: the two lowest are the two described as old men, the highest is the child.
+  Language lives in `tongue` and `first_words` and does not touch register.
 
-Всё это выводимо из `content` регулярным выражением
-(`live_v1/pitch_text.extract_all_pitches`) — и всё равно записано. Через десять
-лет этого файла не будет, а партитура должна пережить код.
+All of this is derivable from `content` by a regular expression
+(`live_v1/pitch_text.extract_all_pitches`) — and it is written anyway. In ten years
+that file will not exist, and the score has to outlive the code.
 
-### Кто и на кого
+### Who, and to whom
 
-- **`voice_id`** — партия. Постоянный, `voice_00`…`voice_08`.
-- **`model_short`**, **`tongue`** — имя и язык слов. Язык дублируется на каждой
-  строке нарочно: исполнителю, которому дали одну страницу партитуры, не следует
-  искать первую строку лога, чтобы понять, на каком языке его просят петь.
-- **`action`** — `TUNE` (настраиваюсь на чужую высоту) или `NEW` (беру высоту,
-  которую никто не поёт). Это две половины текста Оливерос.
-- **`tuning_to`** — на кого, словами голоса. Свободная проза: `voice_id`,
-  короткое имя, высота, «низкий тёплый гул», ничего.
-- **`tuning_to_id`** — то же, разрешённое до конкретной партии, когда проза её
-  называет. `null`, когда не называет: неразрешимый ответ — это факт о голосе, а
-  не сбой разбора, и `tuning_to` сохраняется в любом случае.
-- **`heard`** — кто был в круге в момент решения: пары `[voice_id, timestamp]`
-  для окна прослушивания (последние 30 секунд, максимум 16 событий). Стрелке
-  нужна партия на обоих концах.
+- **`voice_id`** — the part. Permanent, `voice_00`…`voice_08`.
+- **`model_short`**, **`tongue`** — the name and the language of the words. The
+  language is repeated on every line deliberately: a performer handed one page of the
+  score should not have to find the first line of the log to know what language they
+  are being asked to sing in.
+- **`action`** — `TUNE` (I tune to someone else's pitch) or `NEW` (I take a pitch nobody
+  is singing). These are the two halves of Oliveros's text.
+- **`tuning_to`** — to whom, in the voice's own words. Free prose: a `voice_id`, a short
+  name, a pitch, "the low warm hum", nothing.
+- **`tuning_to_id`** — the same, resolved to a specific part when the prose names one.
+  `null` when it does not: an unresolvable answer is a fact about the voice, not a
+  parsing failure, and `tuning_to` is kept either way.
+- **`heard`** — who was in the circle at the moment of decision: `[voice_id, timestamp]`
+  pairs for the listening window. An arrow needs a part at both ends.
 
-### Прочее в той же строке
+### The rest of the line
 
-`gen_s`, `render_s`, `gpu_s`, `own_cost_usd`, `left_usd_before` — реестр
-смертности (`modal/MORTALITY.md`). `dying` — голосу осталось меньше пятнадцати
-минут, и его паузы сжимаются: единственное предупреждение, которое получает зал.
-`final` — этот вдох последний, который голос может себе позволить, и он взят
-самым длинным, какой позволяет партитура. Оба стоит нотировать: перед смертью
-ритм партии слышимо меняется.
+`gen_s`, `render_s`, `gpu_s`, `own_cost_usd`, `left_usd_before` belong to the ledger
+(`modal/MORTALITY.md`). `dying` — the voice has less than fifteen minutes left and its
+rests contract: the only warning the room gets. `final` — this breath is the last the
+voice can afford, taken as long as the score allows. Both are worth notating: before a
+death the rhythm of the part audibly changes.
 
 ---
 
-## 4. Как названа высота — четыре случая
+## 4. How the pitch was named — four cases
 
-`pitch_kind` — не техническая деталь, а музыкальное различие, и по числу его не
-восстановить.
+`pitch_kind` is not a technical detail but a musical distinction, and it cannot be
+recovered from the number.
 
-| | что произошло | как читать |
+| | what happened | how to read it |
 |---|---|---|
-| `note` | голос назвал ноту: `"D4"` | нотная головка, точно |
-| `hz` | голос назвал частоту: `"294 Hz"` | головка + цифра центов: он не знал, что это D |
-| `sung` | человек спел и не назвал ничего | головка + центы + волнистая линия по `contour_hz` |
-| `none` | высоты в строке нет вовсе | только слова, или молчание — нотировать без головки |
+| `note` | the voice named a note: `"D4"` | a notehead, exactly |
+| `hz` | the voice named a frequency: `"294 Hz"` | notehead + a cents figure: it did not know this was D |
+| `sung` | a person sang and named nothing | notehead + cents + a wavy line from `contour_hz` |
+| `none` | no pitch in the line at all | words only, or silence — notate without a head |
 
-Обмен партиями (§9) держится именно на этом. Человеку нельзя дать со страницы
-спеть «294 Hz» — ему нужна `pitch_note`. Машине нельзя дать спеть «немного под
-D♯4» — ей нужна `pitch_hz`. Поэтому записаны обе, всегда, для обоих.
+The exchange of parts (§8) rests on exactly this. A person cannot be given "294 Hz" to
+sing from the page — they need `pitch_note`. A machine cannot be given "a little under
+D♯4" — it needs `pitch_hz`. So both are recorded, always, for both.
 
 ---
 
-## 5. Строка вдоха человека — поле за полем
+## 5. A human breath — field by field
 
-`field.jsonl`. Микрофонный сигнал не покидает телефон и никогда не покидал:
-всё ниже — числа, измеренные в браузере.
+`field.jsonl`. The microphone signal does not leave the phone and never did: everything
+below is numbers measured in the browser.
 
 ```json
 {"ts": 1789000217.1, "started_ts": 1789000212.0, "ended_ts": 1789000216.6,
@@ -228,87 +220,79 @@ D♯4» — ей нужна `pitch_hz`. Поэтому записаны обе, 
  "source": "portal"}
 ```
 
-- **`ts`** — когда вдох дошёл до портала. Осталось первым полем и не изменило
-  смысла: его читают `/field`, читатель хора и всё уже записанное. **Началом
-  ноты оно не является.**
-- **`started_ts`** / **`ended_ts`** — начало и конец звука. Считаются как
-  `ts − tail_s − duration_s` и `ts − tail_s`. Это `t` партитуры.
-- **`tail_s`** — сколько прошло между концом звука и решением страницы, что
-  фраза кончилась, по часам самого певца. Страница выжидает полсекунды тишины,
-  прежде чем поверить, что нота кончилась; без этого поля каждое начало в
-  человеческой партии стояло бы поздно на фиксированную величину, которую никто
-  бы уже не обнаружил.
-- **`duration_s`** = **`sound_s`** — озвученная длина фразы. Одна и та же
-  величина под двумя именами: `duration_s` для того, что уже читает лог,
-  `sound_s` — то же имя, что у машин, чтобы одна функция читала обе партии.
-- **`own_rest_s`** — **собственная пауза певца**: между двумя его вдохами, по его
-  собственным аудио-часам. `null` для первого вдоха в сессии и после каждого
-  переоткрытия микрофона: часы начинаются заново, промежуток действительно
-  неизвестен, и ноль соврал бы. Это **единственное число в партитуре, которое
-  слиянием логов не восстановить** — всё остальное про человеческий вдох
-  расставлено по времени прибытия, а сеть в музыку не входит.
-- **`hz`**, **`note`**, **`cents`** — медиана высоты, ближайшая нота, отклонение.
-  Считаются в браузере; в лог кладутся как есть, чтобы партитура говорила то, что
-  певец видел у себя на экране.
-- **`std_hz`** — разброс высоты в герцах. `stability` — четыре слова
-  (`very steady` / `steady` / `vibrato` / `sliding`) — правильная вещь, чтобы
-  показать певцу, и плохая, чтобы оставить в архиве: «steady» покрывает от 30 до
-  80 центов движения, и где внутри этого был голос, из слова не достать.
-- **`contour_hz`** / **`contour_hop_s`** — след высоты: одна медиана на блок,
-  примерно четверть секунды на точку, не больше 128 точек. Глиссандо, вибрато и
-  тон, который куда-то уходит и возвращается, различимы только здесь.
-- **`voiced_fraction`** — доля кадров, в которых нашлась высота. Дыхание,
-  шёпот и срыв голоса читаются отсюда.
-- **`content`** — та же строка, которую видят машины: `"D#4 ~305Hz [steady]"`.
-  Текстовый столбец есть и у человеческих партий.
-- **`who: "human"`**, **`kind: "tone"`** — те же два слова на строках оба лога,
-  чтобы один читатель шёл по объединённой хронологии, не зная, из какого файла
-  строка.
-- **`voice_id`** — случайное слово из четырёх символов, живущее в браузере самого
-  певца. Ни аккаунта, ни аналитики, ни cookie; одно устройство — одна партия.
+- **`ts`** — when the breath reached the portal. **It is not the onset of the note.**
+- **`started_ts`** / **`ended_ts`** — onset and end of sound, computed as
+  `ts − tail_s − duration_s` and `ts − tail_s`. This is the score's `t`.
+- **`tail_s`** — how long passed between the end of the sound and the page deciding the
+  phrase was over, by the singer's own clock. The page waits half a second of silence
+  before believing a note has ended; without this field every onset in the human part
+  would sit late by a fixed amount nobody could later detect.
+- **`duration_s`** = **`sound_s`** — the voiced length of the phrase. One quantity under
+  two names: `duration_s` for what already reads the log, `sound_s` to match the
+  machines so one function reads both parts.
+- **`own_rest_s`** — **the singer's own rest**: between two of their breaths, by their
+  own audio clock. `null` for the first breath of a session and after every reopening
+  of the microphone: the clock restarts, the gap is genuinely unknown, and zero would
+  be a lie. This is **the one number in the score that merging the logs cannot
+  recover** — everything else about a human breath is placed by arrival time, and the
+  network is not part of the music.
+- **`hz`**, **`note`**, **`cents`** — median pitch, nearest note, deviation. Computed in
+  the browser and logged as is, so the score says what the singer saw on their screen.
+- **`std_hz`** — pitch spread in hertz. `stability` — one of four words (`very steady` /
+  `steady` / `vibrato` / `sliding`) — right to show a singer, poor to archive:
+  "steady" covers 30 to 80 cents of motion.
+- **`contour_hz`** / **`contour_hop_s`** — the pitch trace: one median per block,
+  roughly a quarter second per point, at most 128 points. Glissando, vibrato and a
+  tone that wanders and returns are distinguishable only here.
+- **`voiced_fraction`** — the share of frames in which a pitch was found. Breath,
+  whisper and a cracking voice read from here.
+- **`content`** — the same line the machines see: `"D#4 ~305Hz [steady]"`.
+- **`who: "human"`**, **`kind: "tone"`** — the same two words on lines of both logs, so
+  one reader walks the merged chronology without knowing which file a line came from.
+- **`voice_id`** — a random four‑character word living in the singer's own browser. No
+  account, no analytics, no cookie; one device, one part.
 
 ---
 
-## 6. Две тишины, и почему их две
+## 6. Two silences, and why there are two
 
-Это место, где легче всего ошибиться, поэтому оно вынесено отдельно.
+This is where it is easiest to go wrong, so it is set apart.
 
-- **Пауза ансамбля** (`Note.rest_s`) — сколько молчало **всё поле** перед этим
-  вдохом. Ритм целого, то, что читает дирижёр. Выводится точно.
-- **Пауза партии** (`Note.own_rest_s`) — сколько молчал **этот голос** перед
-  своим вдохом. Это то, что читает со своей страницы один исполнитель.
-- **Пауза, услышанная голосом** (`Note.heard_rest_s`) — сколько, по его
-  собственному замеру, молчало поле. Факт о голосе, а не об архиве, и
-  единственная пауза, которая останется, если один из двух файлов будет утерян.
+- **The ensemble's rest** (`Note.rest_s`) — how long **the whole field** was silent
+  before this breath. The rhythm of the whole, what a conductor reads. Inferred exactly.
+- **The part's rest** (`Note.own_rest_s`) — how long **this voice** was silent before
+  its own breath. What one performer reads from their own page.
+- **The rest the voice heard** (`Note.heard_rest_s`) — how long, by its own
+  measurement, the field was silent. A fact about the voice, not the archive, and the
+  only rest that survives if one of the two files is lost.
 
-`score.read()` выводит первые две из объединённой хронологии и не доверяет их
-логу — потому что, когда на каждой строке есть начало и длительность, хронология
-задаёт ритм однозначно:
+`score.read()` infers the first two from the merged chronology and does not trust the
+log for them — because when every line has an onset and a duration, the chronology
+fixes the rhythm unambiguously:
 
-> каждый вдох либо начинается после того, как поле смолкло — и тогда его пауза
-> ровно равна длине этой тишины, — либо начинается, пока кто-то ещё звучит, и
-> тогда пауза равна нулю, а наложение несут абсолютные начала. Третьего случая
-> нет, и нет ни одного промежутка, который не был бы либо звуком, либо
-> записанной тишиной.
+> every breath either begins after the field has fallen silent — and then its rest is
+> exactly the length of that silence — or begins while someone is still sounding, and
+> then its rest is zero and the overlap is carried by the absolute onsets. There is no
+> third case, and no interval that is not either sound or recorded silence.
 
-Это и есть утверждение, что шесть недель восстановимы. Оно проверяется тестом
+That is the claim that six weeks are recoverable. It is checked by
 `test_the_score_tiles_the_time_it_covers`.
 
-Пауза **никогда не бывает отрицательной**: наложение — это наложение, а не пауза
-обратного знака, и оно сохраняется в абсолютных `t`. Ноль в столбце паузы читается
-как «вошёл в поле, которое ещё звучало».
+A rest is **never negative**: an overlap is an overlap, not a rest of the opposite sign,
+and it is preserved in absolute `t`. A zero in the rest column reads as "entered a field
+that was still sounding".
 
 ---
 
-## 7. Служебные записи
+## 7. Service records
 
-Всё это тоже `choir.jsonl`. Реестр смертности разбирает их подробно
-(`modal/MORTALITY.md`); здесь — только то, что значит для партитуры.
+All in `choir.jsonl`. The ledger reads them in detail (`modal/MORTALITY.md`); here only
+what they mean for the score.
 
-### `kind: "birth"` — список партий
+### `kind: "birth"` — the list of parts
 
-Одна строка, однажды, 18 сентября. Несёт `declared_usd`, `rate_usd_per_hour`,
-`wallets` и **`cast`** — список партий партитуры. На каждый голос:
+One line, once, at the birth. Carries `declared_usd`, `rate_usd_per_hour`, `wallets`
+and **`cast`** — the list of parts. Per voice:
 
 ```json
 {"voice_id": "voice_00", "model_short": "gpt-2",
@@ -317,13 +301,13 @@ D♯4» — ей нужна `pitch_hz`. Поэтому записаны обе, 
  "tongue": "English", "kokoro": "am_onyx", "instruct": false, "hears": false}
 ```
 
-`tongue` и `kokoro` — на каком языке и каким голосом это звучало.
-**`instruct: false`** важнее, чем кажется: старик (GPT-2) и ребёнок
-(TinyStories-33M) не умеют получать инструкции, их никогда и не просили петь по
-правилам — форму держал рантайм, а голос давал только дыхание. Исполнителю,
-берущему такую партию, это надо знать: она устроена иначе.
+`tongue` and `kokoro` — in what language and with what voice this sounded.
+**`instruct: false`** matters more than it looks: the old man (GPT‑2) and the child
+(TinyStories‑33M) cannot take instructions and were never asked to sing by the rules —
+the runtime held the form, the voice only gave the breath. A performer taking such a
+part should know: it is built differently.
 
-### `kind: "death"` — двойная тактовая черта
+### `kind: "death"` — a double barline
 
 ```json
 {"timestamp": ..., "kind": "death", "voice_id": "voice_05",
@@ -333,190 +317,162 @@ D♯4» — ей нужна `pitch_hz`. Поэтому записаны обе, 
  "last_words": "294Hz — 我跟着你"}
 ```
 
-Момент, в который партия кончается и больше не возобновляется — в логе нет и не
-может быть события, возвращающего голос к жизни (`mortality.py`: смерть выводима,
-а не хранима). Для партитуры это двойная черта в одной строке и `living_after`
-партий, продолжающих дальше. `last_words` — последнее сказанное.
-
-Смертей будет шесть, между 28 октября и 2 ноября. Последние две — после
-закрывающего звонка, и свидетелей в зале у них не будет; в партитуре они есть.
+The moment a part ends and is never resumed — there is not, and cannot be, an event in
+the log that brings a voice back (`mortality.py`: death is derived, not stored). For the
+score this is a double barline on one line and `living_after` parts continuing.
+`last_words` is the last thing said.
 
 ### `kind: "card"` / `"exit"` / `"load"` / `"score"` / `"train"`
 
-- `card` — каждые 30 секунд, пока карта тёплая, со списком `resident`. Это то,
-  чем в логе отличается **отдыхающий хор от остановленного**: без этих строк
-  месяц тишины, за который работа как раз и платит, выглядел бы бесплатным.
-  Для партитуры это не ноты и нотировать их не надо, но именно они доказывают,
-  что тишина между вдохами была тишиной, а не отсутствием произведения.
-- `exit` — карта отпущена. Промежуток до следующего контейнера — не тишина
-  произведения, а его пауза во времени. Гравёру стоит отметить его иначе.
-- `load` — приезд весов голоса на карту. Начало партии в физическом смысле.
-- `score` — голос прочитал Оливерос и написал себе личную партитуру (§9).
-- `train` — ночная LoRA. Между вечером и утром голос менялся; для партитуры это
-  граница, за которой та же партия звучит иначе.
+- `card` — every 30 seconds while the card is warm, with the list of `resident` voices.
+  This is what in the log tells **a resting choir from a stopped one**: without these
+  lines the month of silence the work pays for would look free. Not notes, and not to be
+  notated, but they are what proves the silence between breaths was silence and not the
+  absence of the work.
+- `exit` — the card was released. The gap until the next container is not a silence of
+  the work but a pause in its time. An engraver should mark it differently.
+- `load` — a voice's weights arrived on the card. The beginning of the part in the
+  physical sense.
+- `score` — the voice read Oliveros and wrote itself a personal score (§9).
+- `train` — a school lesson. Between one and the next the voice changed; for the score
+  it is a boundary past which the same part sounds different.
 
 ---
 
-## 8. Обмен партиями
+## 8. The exchange of parts
 
-Задуманная форма исполнения: **люди поют машинные партии, машины — человеческие.**
-`score.parts()` делит партитуру по `voice_id`, потому что партия — это именно то,
-чем обмениваются. Страница партии печатается так, чтобы держаться сама: кто ею
-владел, кому её петь, и дальше только паузы, высоты, длительности и слова.
-Ничего на странице не ссылается на остальной лог.
+The intended performance: **people sing the machine parts, machines sing the human
+parts.** `score.parts()` splits the score by `voice_id`, because a part is exactly what
+is exchanged. A part's page is printed to stand on its own: who owned it, who is to sing
+it, and then only rests, pitches, durations and words.
 
-Что нужно каждой стороне, и почему обе половины записаны одинаково:
+What each side needs, and why both halves are recorded alike:
 
-- **Человеку, взявшему машинную партию:** `pitch_note` (спеть «294 Hz» нельзя),
-  `sound_s`, `own_rest_s`, `content` и `tongue` — текст надо произнести, и на
-  своём языке. `pitch_kind: "hz"` говорит петь ноту без претензии на точность
-  строя; `pitch_kind: "note"` — точно.
-- **Машине, взявшей человеческую партию:** `pitch_hz` и `pitch_cents` (её тон
-  синтезируется, а не ищется голосом, поэтому 33 цента она возьмёт буквально),
-  `sound_s`, `own_rest_s`, `contour_hz` — если след есть, глиссандо
-  воспроизводимо точно, чего человек в обратную сторону сделать не может.
+- **A person taking a machine part:** `pitch_note` ("294 Hz" cannot be sung), `sound_s`,
+  `own_rest_s`, `content` and `tongue` — the text is to be spoken, in its language.
+  `pitch_kind: "hz"` says sing the note without any claim to exact tuning;
+  `pitch_kind: "note"` says exactly.
+- **A machine taking a human part:** `pitch_hz` and `pitch_cents` (its tone is
+  synthesized, not found by a voice, so it will take the 33 cents literally),
+  `sound_s`, `own_rest_s`, `contour_hz` — where there is a trace, the glissando is
+  reproducible exactly, which a person cannot do in the other direction.
 
-Асимметрия здесь не дефект. Человек не может спеть 33 цента под D♯4 по указанию;
-машина не может не спеть. Обмен слышен именно поэтому.
-
----
-
-## 9. Что ещё стоит сохранить рядом с партитурой
-
-Партитура обязана держаться без всего этого — но всё это есть, и без него она
-беднее.
-
-- **`interpretations.json`** — личная партитура каждого голоса: как этот голос
-  однажды, до первого вдоха, переписал текст Оливерос в инструкции самому себе.
-  Написано один раз и потом не менялось. Исполнителю, берущему партию, стоит
-  прочитать, как её понимал тот, кто её пел. У старика и ребёнка такой записи
-  нет — их не просили, и это тоже надо знать.
-- **`audio/*.wav`** — по одному файлу на озвученный машинный вдох: тон на
-  высоте, слова поверх. Это запись, а не партитура. Ценность — тембр: как звучал
-  `am_onyx`, произносящий английский старика. Имя файла лежит в `audio` строки.
-- **`lives.json`** — снимок реестра. Производное, кэш; удаляется и
-  восстанавливается из лога.
+The asymmetry is not a defect. A person cannot sing 33 cents under D♯4 on instruction;
+a machine cannot fail to. That is what makes the exchange audible.
 
 ---
 
-## 10. Чего в партитуре нет и почему
+## 9. What else is worth keeping beside the score
 
-- **Звука людей.** Микрофонный сигнал не покидает телефон. В партитуре человек
-  есть как высота, длительность, пауза и след — этого хватает, чтобы его партию
-  спели, и не хватает, чтобы услышать комнату, в которой он был. На этом
-  условии работу можно оставить открытой незнакомым людям.
-- **Вдохов из галереи.** Микрофон в кубе на выставке попадает только в окно
-  последних тонов и в `field.jsonl` не дописывается. То, что спето в зале в
-  последнюю неделю, в партитуре не окажется, и это решено сознательно.
-- **Точного момента, когда звук был слышен в зале.** Плеер тянет поле и ставит
-  вдохи в очередь; между входом в поле и колонкой есть задержка, которую лог не
-  фиксирует. Начало ноты в партитуре — момент входа в поле, и других не бывает.
-- **Громкости.** Машинный тон всегда одной амплитуды, речь — одной. У человека
-  громкость измеряется в браузере и не отправляется: между разными телефонами она
-  всё равно несравнима. Партитура без динамики — это ровно то, чем является
-  *Tuning Meditation*.
-- **Весов.** Их не будет. В этом всё дело.
+The score must stand without any of this — but it exists, and the score is poorer
+without it.
+
+- **`interpretations.json`** — each voice's personal score: how this voice, once, before
+  its first breath, rewrote Oliveros's text as instructions to itself. Written once and
+  never changed. A performer taking a part should read how the one who sang it
+  understood it. The old man and the child have no such record — they were not asked,
+  and that too should be known.
+- **`audio/*.wav`** — one file per voiced machine breath: the tone at pitch, the words
+  on top. A recording, not a score. Its value is timbre: how `am_onyx` sounded speaking
+  the old man's English. The filename is in the line's `audio` field.
+- **`lives.json`** — a snapshot of the ledger. Derived; a cache; deleted and rebuilt
+  from the log.
+
+The numbers a person's phone measures and sends are also the only trace of that person
+anywhere in the work: there is no recording, no account and no identifier that
+survives the browser. Measurements must therefore stay comparable across the whole
+run — the pitch detector on the page cannot change its mind about what a note is in
+the week when it matters most.
 
 ---
 
-## 11. Как прочитать
+## 10. What is not in the score, and why
+
+- **The sound of people.** The microphone signal does not leave the phone. A person is
+  in the score as pitch, duration, rest and trace — enough for their part to be sung,
+  not enough to hear the room they were in. On that condition the work can be left open
+  to strangers.
+- **The exact moment a sound was heard in the gallery.** The player pulls the field and
+  queues breaths; between entering the field and the loudspeaker there is a delay the
+  log does not record. The onset in the score is the moment of entering the field.
+- **Loudness.** A machine tone is always one amplitude, speech another. A person's
+  loudness is measured in the browser and not sent: across different phones it is
+  incomparable anyway. A score without dynamics is exactly what the *Tuning Meditation*
+  is.
+- **The weights.** There will be none. That is the point.
+
+---
+
+## 11. How to read it
 
 ```bash
-# демонстрационный срез — работает без лога, без карты и без сети
+# a fabricated slice — works without a log, a card or a network
 python3 portal/score_render.py --demo --parts
 
-# настоящий лог, если файлы под рукой
+# the real log, if the files are at hand
 python3 portal/score_render.py --tail 400 --parts choir.jsonl field.jsonl
 
-# настоящий лог на томе, на CPU, за копейки
+# the real log on the volume, on CPU, for pennies
 modal run portal/choir_app.py::engrave --tail 400 --parts
 ```
 
-Выводится две вещи. **Хронология** — партитура как она случилась: строка на вдох,
-с паузой перед ним, кто пел, высота именем и частотой, длительность, жест, текст
-и стрелка на того, к кому настраивался. **Страницы партий** — тот же материал по
-голосам, то, чем обмениваются.
+Two things are printed. **The chronology** — the score as it happened: one line per
+breath, with the rest before it, who sang, the pitch by name and frequency, duration,
+gesture, text, and an arrow to whom it tuned. **The part pages** — the same material by
+voice, which is what gets exchanged.
 
-Программно:
+Programmatically:
 
 ```python
 import score
-notes = score.read(choir_rows, human_rows)   # объединённая хронология
-pages = score.parts(notes)                   # по партиям
+notes = score.read(choir_rows, human_rows)   # merged chronology
+pages = score.parts(notes)                   # by part
 ```
 
-`score.Note` — плоская запись без ссылок внутрь лога и без ленивых обращений:
-`list[Note]`, напечатанный как CSV, — всё ещё партитура. Только стандартная
-библиотека, ни Modal, ни сети.
+`score.Note` is a flat record with no references into the log and no lazy lookups: a
+`list[Note]` printed as CSV is still a score. Standard library only; no Modal, no
+network.
 
 ---
 
-## 12. Строки, написанные до партитуры
+## 12. Lines written before the score
 
-Полей этого документа нет ни на одной строке, записанной до 28 августа. Читатель
-обязан считать каждое из них необязательным, и `score.py` так и делает:
+None of the fields in this document exist on any line written before 28 August. A
+reader must treat each of them as optional, and `score.py` does:
 
-- нет `sound_s` → берётся `breath_chosen_s`, и это **нижняя граница, а не
-  правда**: озвученный вдох мог звучать дольше;
-- нет `started_ts` у человека → начало приближается как `ts − duration_s`, то
-  есть без хвоста тишины и без сети. Приближение, и названо приближением;
-- нет блока `pitch_*` → вдох нотируется без высоты, с целым текстом. Частота
-  здесь не восстанавливается нарочно: для этого нужен регэксп из `live_v1`,
-  которого через десять лет не будет, и лучше видимый пробел, чем тихая
-  реконструкция, выглядящая как измерение;
-- нет `silence_before_s` → пауза выводится из хронологии, как и всегда.
+- no `sound_s` → `breath_chosen_s` is used, and it is **a lower bound, not the truth**;
+- no `started_ts` on a human line → the onset is approximated as `ts − duration_s`;
+- no `pitch_*` block → the breath is notated without a pitch, with the whole text. The
+  frequency is deliberately not reconstructed: that would need the regex from
+  `live_v1`, which will not exist in ten years, and a visible gap is better than a
+  quiet reconstruction that looks like a measurement;
+- no `silence_before_s` → the rest is inferred from the chronology, as always.
 
-Ни одно поле не переименовано и ни одно не удалено. `mortality.py` проигрывает
-тот же файл для бухгалтерии и не замечает добавленного (проверяется тестом
-`test_the_ledger_reads_the_new_shape_exactly_as_it_read_the_old`);
-`choir_app._choir_event` отбирает поля июньского `Event` по имени; `/field`
-читает несколько ключей по имени. Расширять — можно, менять — нельзя.
+No field has been renamed and none removed. `mortality.py` replays the same file for
+the accounts and does not notice what was added; `choir_app._choir_event` picks the
+fields of the June `Event` by name; `/field` reads a few keys by name. Extending is
+allowed; changing is not.
 
 ---
 
-## 13. Одна строка, которой ещё нет
+## 13. To the engraver: a proposal for notation
 
-Сбор человеческих голосов закрывается 18 октября в Венеции — в тот же момент,
-когда хор впервые поднимается в зале. Это событие партитуры: после него в
-`field.jsonl` не появляется больше ни одной строки, и людей в оставшихся двух
-неделях нет вовсе. Сейчас закрытие сбора — деплой, а не запись, поэтому в логе
-оно будет читаться как молчание людей, неотличимое от того, что никто не пел.
+Not binding. The score is text, not a picture, and any engraving is already a
+performer's decision. But one proposal, so the decision has somewhere to start.
 
-Это надо исправить **до 18 октября**, и это одна строка в `choir.jsonl`:
-
-```json
-{"timestamp": ..., "kind": "closed",
- "note": "collection closed — Venice, 18 October 2026"}
-```
-
-`score.read()` её проигнорирует (она не нота), а гравёр поставит на ней
-одинарную черту с подписью. Ни один читатель от этого не ломается. Партитура
-пропускает всё, что не `tone`, `death` или `birth`. Реестр смертности на
-незнакомом `kind` без `voice_id` и без `gpu_s` закрывает срез тёплой карты в этой
-метке времени — то же, что сделала бы очередная строка `card`, — и не списывает
-ни цента лишнего; тождество `списано = цена × тёплые секунды` остаётся верным.
-
----
-
-## 14. Гравёру: предложение нотации
-
-Не обязательное. Партитура — текст, а не картинка, и любая гравировка — уже
-исполнительское решение. Но одно предложение, чтобы решение было с чего начинать.
-
-- **Время пропорциональное, не тактовое.** Шесть недель, паузы от секунд до
-  часов. Тактовая сетка здесь врёт; логарифмическая шкала по времени с явными
-  цифрами паузы читается.
-- **Нотная головка** — на `pitch_note`. Цифра центов рядом — только при
-  `pitch_kind` в `hz` или `sung`; при `note` центов нет, потому что голос выбрал
-  имя, и имя точно по определению.
-- **Волнистая линия** по `contour_hz` под человеческой нотой; у машинной ноты
-  следа нет, и линии быть не должно.
-- **`pitch_kind: "none"`** — головки нет: текст на нитке, как у Кардью.
-- **`sound_s == 0`** — головка в скобках: тон назван и не взят.
-- **Стрелка** от ноты к ноте по `tuning_to_id`; неразрешённое `tuning_to` —
-  подпись словами голоса, а не стрелка в пустоту.
-- **Двойная черта** на `kind: "death"`, с `living_after` под ней. Партия после
-  неё не возобновляется — ни в партитуре, ни в исполнении.
-- **Разрыв** на `exit`: паузы там не было, произведения там не было.
-- **Шапка страницы партии** говорит, кто её пел и кому её петь. Без этого обмен —
-  идея, а не инструкция.
+- **Proportional time, not metric.** Six weeks, rests from seconds to hours. A bar grid
+  lies here; a logarithmic time axis with the rest written as a figure reads.
+- **A notehead** on `pitch_note`. A cents figure beside it only when `pitch_kind` is
+  `hz` or `sung`; with `note` there are no cents, because the voice chose a name and a
+  name is exact by definition.
+- **A wavy line** from `contour_hz` under a human note; a machine note has no trace and
+  should have no line.
+- **`pitch_kind: "none"`** — no head: text on a thread, as in Cardew.
+- **`sound_s == 0`** — a head in brackets: a tone named and not taken.
+- **An arrow** from note to note by `tuning_to_id`; an unresolved `tuning_to` is a
+  caption in the voice's words, not an arrow into nothing.
+- **A double barline** at `kind: "death"`, with `living_after` beneath it. The part does
+  not resume after it — in the score or in performance.
+- **A break** at `exit`: there was no rest there, there was no work there.
+- **The header of a part page** says who sang it and who is to sing it. Without that,
+  the exchange is an idea, not an instruction.

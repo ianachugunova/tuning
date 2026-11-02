@@ -142,17 +142,9 @@ def arrow(n: S.Note) -> str:
     return ""
 
 
-def breaths_ru(n: int) -> str:
-    """"1 вдох", "3 вдоха", "12 вдохов" — the score is read in Russian."""
-    tail = n % 100
-    if 11 <= tail <= 14:
-        return f"{n} вдохов"
-    last = n % 10
-    if last == 1:
-        return f"{n} вдох"
-    if 2 <= last <= 4:
-        return f"{n} вдоха"
-    return f"{n} вдохов"
+def breaths(n: int) -> str:
+    """"1 breath", "12 breaths"."""
+    return f"{n} breath" if n == 1 else f"{n} breaths"
 
 
 def one_line(text: str, width: int) -> str:
@@ -165,8 +157,8 @@ def one_line(text: str, width: int) -> str:
 # The score
 # ---------------------------------------------------------------------------
 
-HEAD = ("      время   пауза  голос           высота             длит.  "
-        "жест  что спето")
+HEAD = ("      time    rest   voice           pitch              dur.   "
+        "gest. what was sung")
 RULE = "\u2500" * 108
 
 
@@ -174,16 +166,16 @@ def chronology(notes: list[S.Note], origin: float) -> list[str]:
     out = [HEAD, RULE]
     for n in notes:
         if n.kind == "birth":
-            out.append(f"{clock(n.t, origin)}  \u2016 РОЖДЕНИЕ  "
+            out.append(f"{clock(n.t, origin)}  \u2016 BIRTH  "
                        f"{one_line(n.text, 60)}")
             out.append(RULE)
             continue
         if n.kind == "death":
             out.append(RULE)
-            out.append(f"{clock(n.t, origin)}  \u2016 СМЕРТЬ  {n.name} "
+            out.append(f"{clock(n.t, origin)}  \u2016 DEATH  {n.name} "
                        f"\u2014 {one_line(n.note, 58)}")
             if n.text:
-                out.append(f"{'':>12}    последнее сказанное: "
+                out.append(f"{'':>12}    last words: "
                            f"{one_line(n.text, 60)}")
             out.append(RULE)
             continue
@@ -210,17 +202,17 @@ def part_pages(notes: list[S.Note], origin: float) -> list[str]:
     for vid, part in sorted(by_part.items(),
                             key=lambda kv: (-len(kv[1]), kv[0])):
         kind = part[0].who
-        swap = "поёт человек" if kind == "machine" else "поёт машина"
+        swap = "a person sings it" if kind == "machine" else "a machine sings it"
         name = part[0].name if kind == "machine" else vid
         sounded = sum(n.sound_s for n in part)
         held = sum(n.own_rest_s or 0.0 for n in part)
         out.append("")
-        out.append(f"\u2550\u2550 ПАРТИЯ: {name}  ({vid}, "
-                   f"{'машина' if kind == 'machine' else 'человек'}"
+        out.append(f"\u2550\u2550 PART: {name}  ({vid}, "
+                   f"{'machine' if kind == 'machine' else 'human'}"
                    f"{', ' + part[0].tongue if part[0].tongue else ''})"
-                   f"  \u2014 в исполнении: {swap}")
-        out.append(f"   {breaths_ru(len(part))}, {sounded:.0f} с звука, "
-                   f"{held:.0f} с собственной тишины между ними")
+                   f"  \u2014 in performance: {swap}")
+        out.append(f"   {breaths(len(part))}, {sounded:.0f} s of sound, "
+                   f"{held:.0f} s of its own silence between them")
         out.append("")
         for n in part:
             # `own_rest_s`, not `rest_s`: a performer with one part in front of
@@ -234,7 +226,7 @@ def part_pages(notes: list[S.Note], origin: float) -> list[str]:
 def summary(notes: list[S.Note]) -> list[str]:
     tones = [n for n in notes if n.kind == "tone"]
     if not tones:
-        return ["ни одного вдоха в этом срезе"]
+        return ["not a single breath in this slice"]
     with_pitch = [n for n in tones if n.pitch_hz]
     with_dur = [n for n in tones if n.sound_s > 0]
     with_rest = [n for n in tones if n.rest_s is not None]
@@ -244,17 +236,17 @@ def summary(notes: list[S.Note]) -> list[str]:
     for n in tones:
         kinds[n.pitch_kind] = kinds.get(n.pitch_kind, 0) + 1
     return [
-        f"{breaths_ru(len(tones))}  "
-        f"(машин: {sum(1 for n in tones if n.who == 'machine')}, "
-        f"людей: {sum(1 for n in tones if n.who == 'human')})",
-        f"с высотой: {len(with_pitch)}/{len(tones)}   "
-        f"с длительностью: {len(with_dur)}/{len(tones)}   "
-        f"с паузой перед: {len(with_rest)}/{len(tones)}",
-        "как названа высота: "
+        f"{breaths(len(tones))}  "
+        f"(machines: {sum(1 for n in tones if n.who == 'machine')}, "
+        f"humans: {sum(1 for n in tones if n.who == 'human')})",
+        f"with pitch: {len(with_pitch)}/{len(tones)}   "
+        f"with duration: {len(with_dur)}/{len(tones)}   "
+        f"with a rest before: {len(with_rest)}/{len(tones)}",
+        "how the pitch was named: "
         + ", ".join(f"{k}={v}" for k, v in sorted(kinds.items())),
-        f"звук {sounded / 60:.1f} мин из {span / 60:.1f} мин — "
-        f"тишина {100 * (1 - sounded / span) if span > 0 else 0:.0f}%",
-        f"смертей в срезе: {sum(1 for n in notes if n.kind == 'death')}",
+        f"sound {sounded / 60:.1f} min of {span / 60:.1f} min — "
+        f"silence {100 * (1 - sounded / span) if span > 0 else 0:.0f}%",
+        f"deaths in this slice: {sum(1 for n in notes if n.kind == 'death')}",
     ]
 
 
@@ -263,15 +255,15 @@ def render(choir_rows: list[dict], human_rows: list[dict],
     notes = S.read(choir_rows, human_rows)
     tones = [n for n in notes if n.kind == "tone"]
     if not tones:
-        return "лог пуст: ни одного тона"
+        return "the log is empty: not a single tone"
     if tail and len(notes) > tail:
         notes = notes[-tail:]
     origin = min(n.t for n in tones)
     first = datetime.datetime.fromtimestamp(origin, datetime.timezone.utc)
 
     lines = [
-        "TUNING MEDITATION \u2014 ПАРТИТУРА",
-        f"ноль партитуры: {first:%d %b %Y %H:%M:%S} UTC  ({origin:.0f})",
+        "TUNING MEDITATION \u2014 SCORE",
+        f"zero of the score: {first:%d %b %Y %H:%M:%S} UTC  ({origin:.0f})",
         "",
         *summary(notes),
         "",
@@ -279,9 +271,9 @@ def render(choir_rows: list[dict], human_rows: list[dict],
     lines += chronology(notes, origin)
     if by_part:
         lines += part_pages(notes, origin)
-    lines += ["", "\u25cf машина   \u25cb человек   "
-              "= названа нота   ~ названа частота   \u00b0 спето без имени   "
-              "\u00b7 без высоты"]
+    lines += ["", "\u25cf machine   \u25cb human   "
+              "= note named   ~ frequency named   \u00b0 sung unnamed   "
+              "\u00b7 no pitch"]
     return "\n".join(lines)
 
 
@@ -419,7 +411,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.demo or not args.choir:
         choir, human = demo_logs()
         if not args.demo:
-            print("нет файлов лога \u2014 показан демонстрационный срез "
+            print("no log files \u2014 showing a fabricated slice "
                   "(--demo)\n", file=sys.stderr)
     else:
         choir = read_jsonl(args.choir)

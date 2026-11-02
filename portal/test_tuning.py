@@ -441,7 +441,7 @@ class WhatTheCastWasMeasuredAt(unittest.TestCase):
         It used to be two, and the re-measurement made it three: gpt-2 at 93,
         llm-jp at 98 and audio-flamingo at 108. The Japanese voice is described
         as a young man and came out between the two elders, so the bottom of the
-        cast is no longer two old men and a gap — `modal/PURCHASE_LIST.md` sizes
+        cast is no longer two old men and a gap — the loudspeaker list sizes
         cabinets for the low voices and now has three of them to cover.
         """
         by_pitch = sorted((v for v in self.cast.singing() if v.speaks_at_hz),
@@ -452,7 +452,7 @@ class WhatTheCastWasMeasuredAt(unittest.TestCase):
             self.assertIn("man", v.casting.lower(), v.short_name)
 
     def test_nobody_sings_below_what_the_cabinets_reach(self):
-        """The 55 Hz floor in `modal/EQUIPMENT_REQUEST.md` is a promise made to
+        """The 55 Hz floor in the equipment request is a promise made to
         Gray Area on the strength of this. If a body is ever recast lower, this
         fails here rather than in the room."""
         for v in self.cast.singing():
