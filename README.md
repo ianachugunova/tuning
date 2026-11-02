@@ -59,9 +59,8 @@ Three Modal apps, two volumes, one card.
 - **`portal/room.py`** — the gallery. A Mac mini plays each voice on its own speaker
   (nine Genelecs in a 16-foot circle) and listens on five microphones in the centre.
   See `portal/ROOM_SETUP.md`.
-- **`live_v1/`** — the June 2026 concert version (Center for New Music, SF): the same
-  score over API models, with human singers. The exhibition reuses its pitch
-  detection and notation.
+- **`live_v1/`** — the modules inherited unchanged from the June 2026 concert version
+  (Center for New Music, SF): the score prompt, pitch‑in‑text parsing, the YIN detector.
 
 Design notes: `modal/MORTALITY.md` (the ledger), `modal/SCORE.md` (the log as
 notation), `modal/HEARING_MODELS.md` and `modal/VOICE_MODELS.md` (what the ears and
