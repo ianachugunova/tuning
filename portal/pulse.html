@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuning · the pulse</title>
+<!--
+  The other screen in the room: one picture instead of nine rows.
+
+  Nine lines fall across the week of the exhibition — each is a wallet, and
+  everything here only goes down, at nine different slopes. A line that
+  reaches the floor stops; the voice is dead and its speaker is silent. When a
+  voice breathes, a ring opens at the end of its line with the note it sang
+  and what the breath cost; when it answers somebody, a thread runs from its
+  point to theirs — to another line, or down to the warm point that is the
+  people at the microphones. Under it all, the field as notation.
+
+  No ticking clock and no forecast line: `mortality.py` says why. The lines
+  show what has been spent, which is the only thing the ledger knows.
+
+  Reads /lives, /lives/history and /field. Plays nothing, hears nothing.
+  URL: /pulse  (?from=2026-10-24T00:00-07:00&to=2026-11-02T00:00-08:00 to
+  change the window; the default is the install weekend and the exhibition week.)
+-->
+<style>
+  :root { --bg:#07090c; --ink:#e8e6e1; --dim:#6b7280; --faint:#333b47; --line:#161b23;
+          --warm:#d9a066; --cool:#7aa2c4;
+          --mono: ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;
+          --voice:"Helvetica Neue",Inter,"Suisse Intl",system-ui,-apple-system,sans-serif; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:var(--voice); font-weight:380; overflow:hidden; }
+  body { display:grid; grid-template-rows:auto 1fr auto; padding:2vh 2.4vw 1.4vh; gap:1vh; }
+  header { display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--line); padding-bottom:.9vh; }
+  header h1 { margin:0; font-size:2.1vh; font-weight:400; letter-spacing:.14em; text-transform:uppercase; }
+  header h1 span { color:var(--dim); letter-spacing:0; text-transform:none; margin-left:1.2em; font-size:1.9vh; }
+  header .sum { font-family:var(--mono); font-size:1.7vh; color:var(--dim); }
+  header .sum b { color:var(--ink); font-weight:400; }
+  header .sum .room { color:var(--warm); margin-left:1.6em; }
+  #stage { position:relative; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; }
+  footer { font-size:1.6vh; color:var(--dim); line-height:1.4; border-top:1px solid var(--line); padding-top:.9vh; display:flex; justify-content:space-between; gap:3vw; }
+  footer b { color:var(--ink); font-weight:400; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tuning <span>nine language models perform Pauline Oliveros's Tuning Meditation (1971), day and night</span></h1>
+  <div class="sum" id="sum">…</div>
+</header>
+<div id="stage"><canvas id="cv"></canvas></div>
+<footer>
+  <div><b>Each line is a wallet.</b> Every breath is paid for out of it — GPU time, at cost — and nothing refills it. When a line reaches the floor, the voice dies and its speaker falls silent for good.</div>
+  <div><b>A ring</b> is a breath, with the note it sang. <b>A thread</b> is a voice tuning to another — or down to <span style="color:var(--warm)">you</span>, at the microphones.</div>
+</footer>
+
+<script>
+(() => {
+const Q = new URLSearchParams(location.search);
+const now0 = Date.now() / 1000;
+const FROM = Q.get("from") ? Date.parse(Q.get("from")) / 1000 : Date.parse("2026-10-24T00:00:00-07:00") / 1000;
+const TO   = Q.get("to")   ? Date.parse(Q.get("to"))   / 1000 : Date.parse("2026-11-02T00:00:00-08:00") / 1000;
+const NOTE = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const hzToNote = hz => { if (!(hz > 0)) return ""; const s = Math.round(12*Math.log2(hz/440)); return NOTE[((s+9)%12+12)%12] + (4 + Math.floor((s+9)/12)); };
+const fmtUsd = v => "$" + (v >= 100 ? v.toFixed(0) : v.toFixed(2));
+const lifeWords = (v) => !v.alive ? "" : v.verdict ? v.verdict :
+  v.hours_left >= 48 ? Math.round(v.hours_left/24) + " days" : v.hours_left >= 1.5 ? Math.round(v.hours_left) + " hours" : "within the hour";
+const esc = s => String(s);
+const PULSE_S = 7, THREAD_S = 8, FIELD_WINDOW_S = 120;
+
+let lives = [], order = [], hist = {voices: [], points: []}, skew = 0;
+const names = {}, pulses = [], threads = [], last = {};
+let events = [], since = 0, humanSeen = 0, roomPulse = 0;
+
+async function getJSON(u) { return (await fetch(u, {cache: "no-store"})).json(); }
+
+async function pollLives() {
+  try {
+    const d = await getJSON("/lives");
+    lives = d.voices || [];
+    for (const v of lives) names[v.voice_id] = v.name;
+    if (!order.length) order = lives.map(v => v.voice_id);
+    const alive = lives.filter(v => v.alive).length;
+    const room = (Date.now()/1000 + skew) - humanSeen < 90 ? `<span class="room">somebody is singing in the room</span>` : "";
+    document.getElementById("sum").innerHTML =
+      `<b>${alive}</b> of ${lives.length} alive · <b>${fmtUsd(d.total_left_usd || 0)}</b> left between them · burning ${fmtUsd(d.rate_usd_per_hour || 0)}/hour${room}`;
+  } catch (e) {}
+}
+async function pollHistory() { try { hist = await getJSON("/lives/history"); } catch (e) {} }
+async function pollField() {
+  try {
+    const d = await getJSON(since ? `/field?since=${since}` : "/field?limit=60");
+    const fresh = d.recent || [];
+    const first = !since;
+    for (const e of fresh) {
+      if (e.ts > since) since = e.ts;
+      events.push(e);
+      if (e.who === "model") last[e.voice_id] = e;
+      if (e.who === "human") humanSeen = Math.max(humanSeen, e.ts);
+      if (first) continue;                       // the backlog is drawn, not pulsed
+      if (e.who === "model") {
+        pulses.push({vid: e.voice_id, at: e.ts, hz: e.hz, cost: e.cost_usd, human: false,
+                     kind: e.tuning_to ? (names[e.tuning_to] ? "tune" : "person") : "new"});
+        if (e.tuning_to) threads.push({from: e.voice_id, to: names[e.tuning_to] ? e.tuning_to : "room", at: e.ts});
+      } else {
+        pulses.push({vid: "room", at: e.ts, hz: e.hz, human: true, kind: "person"});
+        roomPulse = e.ts;
+      }
+    }
+    if (fresh.length) skew = since - Date.now()/1000;
+    const cut = since - FIELD_WINDOW_S - 30;
+    events = events.filter(e => e.ts > cut);
+  } catch (e) {}
+}
+
+// ------------------------------------------------------------------ drawing
+const cv = document.getElementById("cv");
+function draw() {
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width*dpr) || cv.height !== Math.round(r.height*dpr)) { cv.width = r.width*dpr; cv.height = r.height*dpr; }
+  const g = cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r.width,r.height);
+  const W = r.width, H = r.height, now = Date.now()/1000 + skew;
+  const vh = H / 100;
+  const stripH = Math.round(H * 0.17), chart = {x0: 0, x1: W - Math.max(150, W*0.13), y0: 2*vh, y1: H - stripH - 3*vh};
+  // ---- scales
+  const t0 = FROM, t1 = Math.max(TO, now + 3600);
+  const X = t => chart.x0 + (t - t0) / (t1 - t0) * (chart.x1 - chart.x0);
+  // The people at the microphones: on the floor, just ahead of now, where the
+  // lines are about to go.
+  const roomPt = {x: Math.min(chart.x1 - 8*vh, X(now) + 7*vh), y: chart.y1 - 0.8*vh};
+  const byId = Object.fromEntries(lives.map(v => [v.voice_id, v]));
+  let ymax = 50;
+  const vi = Object.fromEntries(hist.voices.map((v, i) => [v, i]));
+  for (const p of hist.points) if (p.t >= t0) for (const l of p.left) ymax = Math.max(ymax, l);
+  for (const v of lives) if (v.left_usd) ymax = Math.max(ymax, v.left_usd);
+  ymax = Math.ceil(ymax / 50) * 50;
+  const Y = usd => chart.y1 - (usd / ymax) * (chart.y1 - chart.y0);
+
+  // ---- grid: days and dollars
+  g.font = `${Math.max(10, 1.5*vh)}px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+  g.textBaseline = "alphabetic";
+  for (let d = new Date(t0*1000); d.getTime()/1000 < t1; d.setDate(d.getDate() + 1)) {
+    d.setHours(0,0,0,0);
+    const x = X(d.getTime()/1000);
+    if (x < chart.x0) continue;
+    g.strokeStyle = "#161b23"; g.beginPath(); g.moveTo(x, chart.y0); g.lineTo(x, chart.y1); g.stroke();
+    g.fillStyle = "#4b5563"; g.textAlign = "left";
+    g.fillText(d.toLocaleDateString("en-US", {weekday: "short", day: "numeric"}), x + 4, chart.y1 + 1.8*vh);
+  }
+  for (let usd = 0; usd <= ymax; usd += 50) {
+    const y = Y(usd);
+    g.strokeStyle = usd ? "#11151b" : "#2a3139"; g.beginPath(); g.moveTo(chart.x0, y); g.lineTo(chart.x1, y); g.stroke();
+    g.fillStyle = "#333b47"; g.textAlign = "left"; g.fillText("$" + usd, chart.x0 + 4, y - 4);
+  }
+  // now
+  const xn = X(now);
+  g.strokeStyle = "#2a3139"; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(xn, chart.y0); g.lineTo(xn, chart.y1); g.stroke(); g.setLineDash([]);
+
+  // ---- the lines
+  const ends = {};
+  for (const vid of order) {
+    const v = byId[vid]; if (!v || v.alive === null) continue;
+    const i = vi[vid];
+    const pts = [];
+    if (i !== undefined) for (const p of hist.points) { if (p.t >= t0 - 3*3600) pts.push([p.t, p.left[i]]); }
+    const endT = v.alive ? now : (v.died || now);
+    const endUsd = v.alive ? (v.left_usd || 0) : 0;
+    pts.push([endT, endUsd]);
+    // the prefix before the window: start the line at the window edge, interpolated
+    const path = pts.filter(p => p[0] >= t0);
+    if (pts.length && pts[0][0] < t0) {
+      const k = pts.findIndex(p => p[0] >= t0);
+      if (k > 0) { const a = pts[k-1], b = pts[k]; const u = (t0 - a[0]) / Math.max(1, b[0] - a[0]); path.unshift([t0, a[1] + (b[1]-a[1])*u]); }
+    }
+    g.lineWidth = 1.6; g.strokeStyle = v.alive ? "rgba(232,230,225,.82)" : "rgba(107,114,128,.55)";
+    g.beginPath();
+    path.forEach((p, k) => { const x = X(p[0]), y = Y(p[1]); k ? g.lineTo(x, y) : g.moveTo(x, y); });
+    g.stroke();
+    const ex = X(endT), ey = Y(endUsd);
+    ends[vid] = {x: ex, y: ey, v};
+    if (!v.alive) {
+      // the floor after death, faint, to now
+      g.strokeStyle = "rgba(107,114,128,.3)"; g.setLineDash([1, 5]); g.beginPath(); g.moveTo(ex, ey); g.lineTo(xn, ey); g.stroke(); g.setLineDash([]);
+      g.fillStyle = "#6b7280"; g.beginPath(); g.arc(ex, ey, 3, 0, 7); g.fill();
+    } else {
+      g.fillStyle = "#e8e6e1"; g.beginPath(); g.arc(ex, ey, 3, 0, 7); g.fill();
+    }
+  }
+  // the people in the room
+  g.fillStyle = now - roomPulse < 20 ? "#d9a066" : "rgba(217,160,102,.35)";
+  g.beginPath(); g.arc(roomPt.x, roomPt.y, 3.5, 0, 7); g.fill();
+  g.fillStyle = "rgba(217,160,102,.7)"; g.textAlign = "center"; g.fillText("the microphones", roomPt.x, roomPt.y - 1.6*vh);
+
+  // ---- threads
+  for (let k = threads.length - 1; k >= 0; k--) {
+    const th = threads[k], age = now - th.at;
+    if (age > THREAD_S) { threads.splice(k, 1); continue; }
+    const a = ends[th.from], b = th.to === "room" ? roomPt : ends[th.to];
+    if (!a || !b) continue;
+    const alpha = Math.max(0, 1 - age / THREAD_S);
+    g.strokeStyle = th.to === "room" ? `rgba(217,160,102,${alpha*.9})` : `rgba(122,162,196,${alpha*.8})`;
+    g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(a.x, a.y);
+    const mx = (a.x + b.x)/2, my = Math.min(a.y, b.y) - Math.abs(a.y - b.y) * 0.15 - 3*vh;
+    g.quadraticCurveTo(mx, my, b.x, b.y); g.stroke();
+  }
+
+  // ---- pulses
+  for (let k = pulses.length - 1; k >= 0; k--) {
+    const p = pulses[k], age = now - p.at;
+    if (age > PULSE_S || age < 0) { if (age > PULSE_S) pulses.splice(k, 1); continue; }
+    const pt = p.vid === "room" ? roomPt : ends[p.vid];
+    if (!pt) continue;
+    const u = age / PULSE_S, rad = 4 + u * 7 * vh, alpha = (1 - u) ** 1.5;
+    g.lineWidth = 1.5;
+    g.strokeStyle = p.human || p.kind === "person" ? `rgba(217,160,102,${alpha})` : p.kind === "tune" ? `rgba(122,162,196,${alpha})` : `rgba(232,230,225,${alpha*.8})`;
+    g.beginPath(); g.arc(pt.x, pt.y, rad, 0, 7); g.stroke();
+    if (age < 4 && p.hz) {
+      g.fillStyle = p.human ? `rgba(217,160,102,${Math.min(1, 2 - age/2)})` : `rgba(232,230,225,${Math.min(1, 2 - age/2)})`;
+      g.textAlign = "left";
+      g.font = `${Math.max(11, 1.9*vh)}px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+      g.fillText(hzToNote(p.hz) + (p.cost ? `  ${(p.cost*100).toFixed(1)}¢` : ""), pt.x + 1.2*vh, pt.y - 1.2*vh);
+    }
+  }
+
+  // ---- labels at the ends, pushed apart
+  g.font = `${Math.max(11, 1.8*vh)}px ${getComputedStyle(document.body).getPropertyValue("--voice")}`;
+  const labels = Object.entries(ends).map(([vid, e]) => ({vid, y: e.y, e})).sort((a, b) => a.y - b.y);
+  const minGap = 4.6*vh;
+  for (let k = 1; k < labels.length; k++) if (labels[k].y - labels[k-1].y < minGap) labels[k].y = labels[k-1].y + minGap;
+  for (let k = labels.length - 1; k >= 0; k--) { if (labels[k].y > chart.y1 - 0.5*vh) labels[k].y = chart.y1 - 0.5*vh; if (k < labels.length-1 && labels[k+1].y - labels[k].y < minGap) labels[k].y = labels[k+1].y - minGap; }
+  const lx = chart.x1 + 1.4*vh;
+  for (const L of labels) {
+    const v = L.e.v, dead = !v.alive;
+    g.strokeStyle = "rgba(107,114,128,.35)"; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(L.e.x + 4, L.e.y); g.lineTo(lx - 0.6*vh, L.y); g.stroke();
+    g.textAlign = "left"; g.textBaseline = "middle";
+    g.fillStyle = dead ? "#6b7280" : "#e8e6e1";
+    g.font = `${Math.max(12, 2.1*vh)}px ${getComputedStyle(document.body).getPropertyValue("--voice")}`;
+    g.fillText(v.name, lx, L.y - 1.15*vh);
+    if (dead) { const w = g.measureText(v.name).width; g.strokeStyle = "#6b7280"; g.beginPath(); g.moveTo(lx, L.y - 1.15*vh); g.lineTo(lx + w, L.y - 1.15*vh); g.stroke(); }
+    g.font = `${Math.max(10, 1.5*vh)}px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    g.fillStyle = dead ? "#4a4f58" : (v.dying || v.hours_left < 24) ? "#d9a066" : "#6b7280";
+    const sub = dead ? `died ${v.died ? new Date(v.died*1000).toLocaleDateString("en-US",{weekday:"short"}) + " " + new Date(v.died*1000).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:false}) : ""}`
+                     : `${fmtUsd(v.left_usd)} · ${lifeWords(v)}`;
+    g.fillText(sub, lx, L.y + 1.0*vh);
+    const e = last[L.vid];
+    if (!dead && e && e.hz) { g.fillStyle = "#4b5563"; g.fillText(hzToNote(e.hz), lx + g.measureText(sub).width + 1.2*vh, L.y + 1.0*vh); }
+    g.textBaseline = "alphabetic";
+  }
+
+  // ---- the field strip
+  const fy0 = H - stripH, fy1 = H - 0.5*vh;
+  g.strokeStyle = "#161b23"; g.beginPath(); g.moveTo(0, fy0 - 0.5*vh); g.lineTo(W, fy0 - 0.5*vh); g.stroke();
+  g.font = `${Math.max(10, 1.4*vh)}px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+  g.fillStyle = "#4b5563"; g.textAlign = "left"; g.fillText("the last two minutes · height is pitch", 4, fy0 + 1.4*vh);
+  const LO = 80, HI = 900;
+  const fy = hz => fy1 - (Math.log2(Math.max(LO, Math.min(HI, hz))/LO)/Math.log2(HI/LO)) * (fy1 - fy0 - 2*vh);
+  const fx = ts => W - ((now - ts)/FIELD_WINDOW_S) * W;
+  for (const e of events) {
+    if (!(e.hz > 0) || now - e.ts > FIELD_WINDOW_S) continue;
+    const human = e.who === "human", len = human ? (e.dur || e.duration_s || 2) : 8;
+    const x0 = fx(e.ts), x1 = Math.min(W, fx(e.ts + len)), yy = fy(e.hz);
+    g.strokeStyle = human ? "#d9a066" : "#7aa2c4"; g.lineWidth = human ? 3 : 2; g.globalAlpha = human ? .95 : .7;
+    g.beginPath(); g.moveTo(x0, yy); g.lineTo(Math.max(x0 + 3, x1), yy); g.stroke(); g.globalAlpha = 1;
+    if (!human) { g.fillStyle = "#6b7280"; g.fillText(names[e.voice_id] || "", x0 + 2, yy - 4); }
+  }
+  requestAnimationFrame(draw);
+}
+
+pollLives(); pollHistory(); pollField();
+setInterval(pollLives, 15000);
+setInterval(pollHistory, 600000);
+setInterval(pollField, 4000);
+setTimeout(() => location.reload(), 3600 * 1000);
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

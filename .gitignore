@@ -1,0 +1,16 @@
+# Keys never belong in a repository.
+.env
+.env.*
+
+# Local Python environments.
+.venv*/
+__pycache__/
+*.pyc
+
+# Synthetic test audio — regenerate with `python3 portal/make_fixtures.py`.
+portal/fixtures.json
+
+# Regenerable output: audio, frames, stems.
+live_v1/out/
+
+.DS_Store

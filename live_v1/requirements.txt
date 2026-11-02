@@ -1,0 +1,7 @@
+openai>=1.40.0
+python-dotenv>=1.0.0
+
+# For human voice input (optional — only needed if running with --humans N)
+sounddevice>=0.4.6
+numpy>=1.24
+openai-whisper>=20231117

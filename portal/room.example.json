@@ -1,0 +1,25 @@
+{
+  "portal": "https://tuning-grayarea--tuning-portal-web.modal.run",
+
+  "output_device": "UMC1820",
+  "input_device": "UMC1820",
+
+  "channels": {
+    "voice_00": 1,
+    "voice_01": 2,
+    "voice_02": 3,
+    "voice_03": 4,
+    "voice_04": 5,
+    "voice_05": 6,
+    "voice_06": 7,
+    "voice_07": 8,
+    "voice_08": 9
+  },
+
+  "gain": {},
+
+  "humans_channel": null,
+
+  "mics": [1, 2, 3, 4, 5],
+  "room": "gallery"
+}

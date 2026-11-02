@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuning — the score</title>
+<style>
+  /* What the work leaves behind is not the weights. They are deleted when the
+     wallets empty. What is kept is the log of everything sung, by machines and
+     by people, read as notation — in the lineage of Oliveros's text scores and
+     Cardew's *Treatise*. See `modal/SCORE.md` and `portal/score_render.py`,
+     whose column order, marks and gestures this page follows so that the page
+     and the printed score cannot drift apart.
+
+     This page is also the answer to a problem the site has after 18 October: a
+     dead link reads as a broken website, not as an ending. The score is
+     readable after the last breath, from the log alone, forever. */
+  :root {
+    --bg: #07090c;
+    --ink: #e8e6e1;
+    --dim: #6b7280;
+    --faint: #333b47;
+    --line: #161b23;
+    --warm: #d9a066;
+    --cool: #7aa2c4;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; min-height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 400 13px/1.6 var(--mono);
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 34px 20px 70px; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 22px; }
+  .mark { font: 400 11px/1 var(--mono); letter-spacing: .34em; color: var(--faint); }
+  h1 {
+    margin: 18px 0 0; font-family: var(--serif); font-weight: 400;
+    font-size: clamp(26px, 5vw, 40px); line-height: 1.15; letter-spacing: .004em;
+  }
+  .sub {
+    margin-top: 12px; max-width: 46em;
+    font-family: var(--serif); font-size: 16px; line-height: 1.55;
+    color: var(--dim);
+  }
+  .meta {
+    margin-top: 18px; display: flex; flex-wrap: wrap; gap: 6px 26px;
+    font-size: 11px; letter-spacing: .04em; color: var(--dim);
+  }
+  .meta b { color: var(--ink); font-weight: 400; }
+  nav { margin-top: 18px; font-size: 11px; letter-spacing: .06em; }
+  nav a { color: var(--cool); text-decoration: none; border-bottom: 1px solid #23303c; }
+  nav a:hover { color: var(--warm); border-color: var(--warm); }
+
+  /* --- the notation ------------------------------------------------------ */
+  .cols, .row {
+    display: grid;
+    grid-template-columns: 78px 66px 16px 128px 128px 54px 30px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .cols {
+    margin-top: 30px; padding-bottom: 7px; border-bottom: 1px solid var(--line);
+    font-size: 10px; letter-spacing: .11em; text-transform: uppercase;
+    color: var(--faint);
+  }
+  #rows { font-variant-numeric: tabular-nums; }
+  .row { padding: 3px 0; }
+  .row.human { color: var(--warm); }
+  .row.model { color: #8a929e; }
+  .row .who { text-align: center; }
+  .row .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .rest { color: var(--faint); }
+  .row.human .rest { color: #8a6f4f; }
+  .row .none { color: var(--faint); }
+
+  .rule {
+    margin: 16px 0; padding: 8px 0; border-top: 1px solid #2a323d;
+    border-bottom: 1px solid #2a323d;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .legend {
+    margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-size: 11px; line-height: 1.9; color: var(--dim);
+  }
+  .legend .k { color: var(--ink); }
+  .swap {
+    margin-top: 26px; padding: 18px 20px; border: 1px solid var(--line);
+    font-family: var(--serif); font-size: 15px; line-height: 1.6; color: var(--dim);
+  }
+  .swap b { color: var(--ink); font-weight: 400; }
+
+  #empty { margin-top: 30px; color: var(--dim); }
+
+  @media (max-width: 760px) {
+    .cols { display: none; }
+    .row {
+      grid-template-columns: 62px 14px 96px 40px minmax(0, 1fr);
+      gap: 8px; font-size: 11px;
+    }
+    .row .rest, .row .gest, .row .dur2 { display: none; }
+  }
+
+  /* The score is a document. It should print like one. */
+  @media print {
+    :root { --bg: #fff; --ink: #111; --dim: #555; --faint: #999; --line: #ddd;
+            --warm: #7a4f14; --cool: #24506e; }
+    html, body { background: #fff; color: #111; }
+    nav, #live { display: none; }
+    .row.human { color: #7a4f14; }
+    .row.model { color: #333; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="mark">Hz</div>
+  <h1>Tuning Meditation — the score</h1>
+  <p class="sub">
+    Everything sung into this field, by machines and by people, in the order it
+    happened. The log is not a record of the work; it is the work, and it is
+    what remains after the weights are deleted. The intended performance is a
+    swap.
+  </p>
+  <div class="meta" id="meta"></div>
+  <nav><a href=".">← the field</a></nav>
+</header>
+
+<div class="cols">
+  <span>time</span><span>rest</span><span></span><span>voice</span>
+  <span>pitch</span><span>held</span><span>gest</span><span>what was sung</span>
+</div>
+
+<div id="rows"></div>
+<div id="empty">Reading the field…</div>
+
+<div class="legend">
+  <span class="k">●</span> a machine &nbsp;·&nbsp;
+  <span class="k">○</span> a person &nbsp;·&nbsp;
+  <span class="k">=</span> a note was named &nbsp;·&nbsp;
+  <span class="k">~</span> a frequency was named &nbsp;·&nbsp;
+  <span class="k">°</span> a person sang and named nothing &nbsp;·&nbsp;
+  <span class="k">?</span> it meant a pitch and the runtime chose one &nbsp;·&nbsp;
+  <span class="k">·</span> no pitch at all<br>
+  <span class="k">—</span> held &nbsp;·&nbsp;
+  <span class="k">↗ ↘</span> slid &nbsp;·&nbsp;
+  <span class="k">~</span> went and came back &nbsp;·&nbsp;
+  <span class="k">↺</span> tuned to another voice &nbsp;·&nbsp;
+  <span class="k">✦</span> began something new
+</div>
+
+<div class="swap">
+  <b>How to perform it.</b> Take any stretch of the chronology above. Humans
+  sing the parts marked ● — the machines' parts — and machines sing the parts
+  marked ○. Pitch as written; where a part carries no pitch, the performer
+  chooses one and holds it for the length given. The rests are part of the
+  score and are not to be shortened.
+</div>
+
+</div>
+
+<script src="pitch-core.js"></script>
+<script>
+(() => {
+"use strict";
+
+const rowsEl = document.getElementById("rows");
+const emptyEl = document.getElementById("empty");
+const metaEl = document.getElementById("meta");
+
+const hzToNote = typeof PitchCore !== "undefined" ? PitchCore.hzToNote : () => "";
+const centsOff = typeof PitchCore !== "undefined" ? PitchCore.centsOff : () => 0;
+
+/** A rest, in the unit that reads best at its own length. score_render.py. */
+function rest(s) {
+  if (s === null || s === undefined) return "";
+  if (s < 60) return `${s.toFixed(1)}s`;
+  if (s < 3600) return `${(s / 60).toFixed(1)}m`;
+  return `${(s / 3600).toFixed(1)}h`;
+}
+
+/**
+ * What the pitch did while it was held. A held note that slides is a notatable
+ * gesture, and `stability` reduces the whole thing to one of four words — so
+ * the shape is read off the contour instead.
+ */
+function gesture(contour) {
+  const p = (contour || []).filter((v) => v > 0);
+  if (p.length < 3) return "—";
+  const cents = (a, b) => 1200 * Math.log2(b / a);
+  const first = p[0], last = p[p.length - 1];
+  const hi = Math.max(...p), lo = Math.min(...p);
+  const net = cents(first, last);
+  const span = cents(lo, hi);
+  if (span < 60) return "—";
+  if (Math.abs(net) < 40 && span >= 60) return "~";
+  return net > 0 ? "↗" : "↘";
+}
+
+// How a pitch was arrived at, in one character. This table is `MARK` in
+// score_render.py and must stay identical to it: the printed score and this
+// page are two renderings of one log, and a page that marked a person's sung
+// tone as a named note would be making a claim the log does not make.
+//   =  the voice named a note          ("D4")
+//   ~  the voice named a frequency     ("294 Hz")
+//   °  a person sang and named nothing
+//   ?  it meant a pitch and the runtime chose one for it
+//   ·  no pitch: words only, or a chosen silence
+const MARK = { note: "=", hz: "~", sung: "\u00b0", given: "?", none: "\u00b7" };
+
+function pitchCell(e) {
+  const kind = e.pitch_kind || (e.hz > 0 ? (e.who === "human" ? "sung" : "hz") : "none");
+  if (!(e.hz > 0)) return { mark: MARK.none, text: "", none: true };
+  // A named note has no cents to show: the voice chose the name, so the name is
+  // exact by definition and the frequency is what we made of it. Anything else
+  // carries the arrow, because a voice that said "294 Hz" did not say D4 and a
+  // person who sang 305.2 Hz was 22 cents under D♯4 and meant it.
+  const name = hzToNote(e.hz);
+  if (kind === "note") {
+    return { mark: MARK.note, text: `${name}\u2003${e.hz.toFixed(1)} Hz` };
+  }
+  const c = centsOff(e.hz);
+  const arrow = c ? `${c >= 0 ? "+" : "\u2212"}${Math.abs(c)}\u2003` : "";
+  return { mark: MARK[kind] || "?", text: `${name} ${arrow}\u2003${e.hz.toFixed(1)} Hz` };
+}
+
+const clock = (ts) =>
+  new Date(ts * 1000).toISOString().slice(11, 19);
+
+function render(d) {
+  const all = (d.recent || []).slice().sort((a, b) => a.ts - b.ts);
+  if (!all.length) {
+    emptyEl.textContent = "The field is empty. Nothing has been sung yet.";
+    return;
+  }
+  emptyEl.style.display = "none";
+  rowsEl.textContent = "";
+
+  let prev = null;
+  let day = "";
+  for (const e of all) {
+    const stamp = new Date(e.ts * 1000).toDateString();
+    if (stamp !== day) {
+      day = stamp;
+      const r = document.createElement("div");
+      r.className = "rule";
+      r.textContent = new Date(e.ts * 1000).toLocaleDateString(undefined,
+        { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      rowsEl.append(r);
+      prev = null;
+    }
+
+    const row = document.createElement("div");
+    row.className = "row " + (e.who === "human" ? "human" : "model");
+
+    const p = pitchCell(e);
+    const dur = e.dur > 0 ? `${e.dur.toFixed(1)}s` : "";
+    const gest = e.who === "human" ? gesture(e.contour)
+               : e.action === "TUNE" ? "↺" : e.action === "NEW" ? "✦" : "";
+
+    const cells = [
+      ["time", clock(e.ts)],
+      ["rest", prev ? rest(e.ts - prev.ts) : ""],
+      ["who", e.who === "human" ? "○" : "●"],
+      ["name", e.who === "human"
+        ? (e.name === "a voice in the room" ? "in the room" : e.voice_id || "a voice")
+        : e.name || ""],
+      ["pitch", p.text, p.mark, p.none],
+      ["dur2", dur],
+      ["gest", gest],
+      ["txt", String(e.text || "")],
+    ];
+
+    for (const [cls, text, mark, none] of cells) {
+      const s = document.createElement("span");
+      s.className = cls + (none ? " none" : "");
+      if (mark) {
+        const m = document.createElement("span");
+        m.className = "none";
+        m.textContent = mark + " ";
+        s.append(m, text);
+      } else {
+        s.textContent = text;
+      }
+      row.append(s);
+    }
+    rowsEl.append(row);
+    prev = e;
+  }
+
+  const since = d.sounding_since
+    ? new Date(d.sounding_since * 1000).toLocaleDateString(undefined,
+        { day: "numeric", month: "long", year: "numeric" })
+    : "—";
+  metaEl.innerHTML =
+    `<span>score zero <b>${since}</b></span>` +
+    `<span>human breaths <b>${(d.size || 0).toLocaleString()}</b></span>` +
+    `<span>machine breaths <b>${(d.choir_size || 0).toLocaleString()}</b></span>` +
+    `<span>showing the last <b>${all.length}</b></span>`;
+}
+
+async function load() {
+  try {
+    const r = await fetch("field?limit=300", { cache: "no-store" });
+    if (!r.ok) throw new Error(String(r.status));
+    render(await r.json());
+  } catch (err) {
+    emptyEl.textContent = "The field did not answer. It will be asked again.";
+  }
+}
+
+load();
+setInterval(load, 15000);
+})();
+</script>
+</body>
+</html>

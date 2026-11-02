@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuning · the board</title>
+<!--
+  The board: the one screen in the room at Gray Area.
+
+  The speakers say that the choir is singing. They cannot say what the piece is
+  about — that each voice pays for every breath out of a wallet that is not
+  refilled, and that a speaker going quiet is a death, not a fault. This page
+  says it: nine rows in the order of the nine speakers, each with its wallet,
+  what it is doing on this breath (answering whom, or starting its own), what
+  it said, and what the breath cost. Below, the field as notation — the same
+  strip field.html draws — so "tuning" is also visible as one mark moving to
+  meet another.
+
+  Reads only `/lives` and `/field`. Plays nothing, hears nothing: the choir is
+  in the room out of its own speakers, and the microphones go through room.py.
+  URL: /board  (the speaker order comes from ?order=voice_00,voice_01,… if the
+  room is cabled differently from the cast order).
+-->
+<style>
+  :root {
+    --bg: #07090c; --ink: #e8e6e1; --dim: #6b7280; --faint: #333b47;
+    --line: #161b23; --warm: #d9a066; --cool: #7aa2c4; --dead: #4a4f58;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --voice: "Helvetica Neue", Inter, "Suisse Intl", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: var(--voice); font-weight: 380; overflow: hidden; }
+  body { display: grid; grid-template-rows: auto 1fr auto auto; padding: 2.2vh 2.4vw 1.6vh; gap: 1.4vh; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid var(--line); padding-bottom: 1vh; }
+  header h1 { margin: 0; font-size: 2.1vh; font-weight: 400; letter-spacing: .14em; text-transform: uppercase; }
+  header h1 span { color: var(--dim); letter-spacing: 0; text-transform: none; margin-left: 1.2em; font-size: 1.9vh; }
+  header .sum { font-family: var(--mono); font-size: 1.7vh; color: var(--dim); }
+  header .sum b { color: var(--ink); font-weight: 400; }
+  header .sum .room { color: var(--warm); margin-left: 1.6em; }
+  /* The school, on the same line as the money: quiet while it counts, warm
+     from the bell until every voice has returned. */
+  header .sum .school { margin-left: 1.6em; }
+  header .sum .school.rung { color: var(--warm); }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  td { padding: 0 .6vw; vertical-align: middle; border-bottom: 1px solid var(--line); height: calc((100vh - 40vh) / 10); }
+  tr.now td { background: linear-gradient(90deg, rgba(122,162,196,.26), rgba(122,162,196,.06) 70%); }
+  tr.now td.n { box-shadow: inset .45vw 0 0 var(--cool); color: var(--cool); }
+  tr.now .name { color: #fff; }
+  tr.now .name::after { content: ""; display: inline-block; width: 1.1vh; height: 1.1vh; border-radius: 50%;
+    background: var(--cool); margin-left: .7em; vertical-align: middle; animation: breathe 1.4s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { transform: scale(.7); opacity: .6; } 50% { transform: scale(1.15); opacity: 1; } }
+  /* The tenth row: whoever is at the microphones. Warm, like every human mark. */
+  tr.room td { border-top: 1px solid var(--faint); }
+  tr.room.now td { background: linear-gradient(90deg, rgba(217,160,102,.26), rgba(217,160,102,.06) 70%); }
+  tr.room.now td.n { box-shadow: inset .45vw 0 0 var(--warm); }
+  tr.room.now .name::after { background: var(--warm); }
+  tr.room .name { color: var(--warm); }
+  tr.room td.n { color: var(--warm); }
+  /* Five microphones, five slots in one row. A slot is dim until somebody sings into it. */
+  .mics { display: flex; gap: 1.2vw; font-family: var(--mono); font-size: 1.6vh; }
+  .mic { flex: 1 1 0; min-width: 0; color: var(--faint); border-left: 2px solid var(--line); padding-left: .6vw; line-height: 1.35; }
+  .mic > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mic.fresh { color: var(--warm); border-left-color: var(--warm); }
+  .mic.cold { color: var(--dim); }
+  .mic .lbl { letter-spacing: .06em; text-transform: uppercase; font-size: 1.3vh; }
+  .mic .ans { color: var(--cool); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mic.cold .ans { color: var(--dim); }
+  tr.dead td { color: var(--dead); }
+  tr.dead .name { text-decoration: line-through; text-decoration-color: var(--dead); }
+  td.n { width: 3.2vw; font-family: var(--mono); color: var(--dim); font-size: 1.8vh; text-align: right; }
+  td.who { width: 19vw; }
+  .name { font-size: 2.5vh; letter-spacing: -.01em; }
+  .name small { color: var(--dim); font-size: 1.6vh; margin-left: .6em; }
+  .raised { color: var(--dim); font-size: 1.45vh; line-height: 1.25; margin-top: .3vh;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  td.wallet { width: 17vw; font-family: var(--mono); font-size: 1.75vh; }
+  .usd { font-size: 2.3vh; }
+  .usd.low { color: var(--warm); }
+  .left { color: var(--dim); margin-top: .25vh; }
+  .left.low { color: var(--warm); }
+  .bar { height: .5vh; background: var(--line); margin-top: .55vh; border-radius: 1px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--cool); }
+  .bar i.low { background: var(--warm); }
+  td.act { }
+  .doing { font-family: var(--mono); font-size: 1.75vh; }
+  .doing .verb { color: var(--cool); }
+  .doing .verb.new { color: var(--ink); }
+  .doing .verb.human { color: var(--warm); }
+  .doing .ago { color: var(--dim); margin-left: 1em; }
+  .said { font-size: 1.6vh; line-height: 1.3; color: #c9c7c2; margin-top: .3vh;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  tr.dead .said, tr.dead .doing { color: var(--dead); }
+  td.cost { width: 9vw; white-space: nowrap; font-family: var(--mono); font-size: 1.7vh; color: var(--dim); text-align: right; }
+  td.cost b { color: var(--ink); font-weight: 400; }
+
+  #field { position: relative; height: 12vh; border-top: 1px solid var(--line); }
+  #field canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #field .cap { position: absolute; left: 0; top: .5vh; font-family: var(--mono); font-size: 1.4vh; color: var(--dim); }
+
+  footer { font-size: 1.5vh; color: var(--dim); line-height: 1.35; border-top: 1px solid var(--line); padding-top: .8vh;
+    display: flex; justify-content: space-between; align-items: center; gap: 3vw; }
+  footer b { color: var(--ink); font-weight: 400; }
+  footer .qr { display: flex; align-items: center; gap: 1.2vw; flex: 0 0 auto; }
+  footer .qr img { width: 8vh; height: 8vh; border-radius: .4vh; }
+  footer .qr div { font-size: 1.5vh; max-width: 18vw; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tuning <span>nine language models perform Pauline Oliveros's Tuning Meditation (1971), day and night</span></h1>
+  <div class="sum" id="sum">…</div>
+</header>
+
+<table id="board"><tbody id="rows"></tbody></table>
+
+<div id="field"><canvas id="cv"></canvas><div class="cap">the last two minutes · height is pitch · <span style="color:var(--cool)">●</span> machine · <span style="color:var(--warm)">●</span> person</div></div>
+
+<footer>
+  <div>Each voice pays for every breath from its own wallet — GPU time, at cost. <b>When the wallet is empty, the voice dies</b> and its speaker falls silent for good.</div>
+  <div><b>tuning to</b> — it answers a note it heard, from a model or from you.<br><b>new</b> — it starts a note of its own. Sing into a microphone: they hear you.</div>
+  <div class="qr"><img src="/qr.png" alt=""><div>You can join the choir from your phone.</div></div>
+</footer>
+
+<script>
+(() => {
+const Q = new URLSearchParams(location.search);
+const LO = 80, HI = 900, WINDOW_S = 120, NOW_S = 8;
+// The room's player sounds a breath a few seconds after the log's timestamp;
+// the row lights when the speaker does, for as long as the tone lasts.
+const LAG_S = Math.max(0, parseFloat(Q.get("lag") || "4") || 0);
+const NOTE = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const hzToNote = hz => { if (!(hz > 0)) return ""; const s = Math.round(12*Math.log2(hz/440)); return NOTE[((s+9)%12+12)%12] + (4 + Math.floor((s+9)/12)); };
+const fmtUsd = v => "$" + (v >= 100 ? v.toFixed(0) : v.toFixed(2));
+const ago = s => s < 60 ? Math.round(s) + " s ago" : s < 3600 ? Math.round(s/60) + " min ago" : Math.round(s/3600) + " h ago";
+const lifeWords = (h, verdict) => verdict ? verdict :
+  h >= 48 ? Math.round(h/24) + " days left" : h >= 1.5 ? Math.round(h) + " hours left" : "dies within the hour";
+const whenDied = ts => { const d = new Date(ts*1000); return d.toLocaleDateString("en-US",{weekday:"short"}) + " " + d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:false}); };
+
+let lives = [], order = [], last = {}, events = [], since = 0, skew = 0, totals = {};
+// The newest breath from a person — overall, and per microphone — and the
+// newest machine breath that answered each person: the tenth row is made of these.
+let lastHuman = null, lastAnswer = null;
+const lastByMic = {}, answered = {};
+const names = {};
+
+async function pollLives() {
+  try {
+    const d = await (await fetch("/lives", {cache: "no-store"})).json();
+    lives = d.voices || [];
+    for (const v of lives) names[v.voice_id] = v.name;
+    if (!order.length) order = (Q.get("order") || "").split(",").filter(Boolean);
+    if (!order.length) order = lives.map(v => v.voice_id);
+    totals = d;
+    renderSum(); renderRows();
+  } catch (e) {}
+}
+
+async function poll() {
+  try {
+    const d = await (await fetch(since ? `/field?since=${since}` : "/field?limit=80", {cache: "no-store"})).json();
+    const fresh = d.recent || [];
+    for (const e of fresh) {
+      if (e.ts > since) since = e.ts;
+      events.push(e);
+      if (e.who === "model") {
+        last[e.voice_id] = e;
+        if (e.tuning_to && !names[e.tuning_to]) {
+          if (!lastAnswer || e.ts >= lastAnswer.ts) lastAnswer = e;
+          answered[e.tuning_to] = e;
+        }
+      }
+      if (e.who === "human") {
+        humanSeen = Math.max(humanSeen, e.ts);
+        if (!lastHuman || e.ts >= lastHuman.ts) lastHuman = e;
+        const m = /gallery(\d+)/.exec(e.voice_id || "");
+        if (m && (!lastByMic[m[1]] || e.ts >= lastByMic[m[1]].ts)) lastByMic[m[1]] = e;
+      }
+    }
+    if (fresh.length) skew = since - Date.now()/1000;   // the server's clock, roughly
+    if (d.school) school = d.school;
+    const cut = since - WINDOW_S - 30;
+    events = events.filter(e => e.ts > cut);
+    renderSum(); renderRows();
+  } catch (e) {}
+}
+let humanSeen = 0, school = null;
+
+// The school, in words — the same ones the portal's own page uses. Twenty
+// breaths from people ring a bell; each voice then learns from them on a
+// rented card, paid from its own wallet, while the choir goes on singing.
+function schoolLine(now, alive) {
+  const s = school;
+  if (!s || !s.needs) return "";
+  const bellAge = s.bell_ts ? now - s.bell_ts : Infinity;
+  const back = (s.lessons || []).filter(l => l.promoted);
+  const expected = Math.max(alive, back.length);
+  if (bellAge < 2 * 3600 && (back.length < expected || bellAge < 3600)) {
+    let line = "the school bell has rung — the choir is learning from the people here";
+    if (back.length >= expected) {
+      line = `every voice has returned changed — ${expected} lessons, each paid from the voice's own wallet`;
+    } else if (back.length) {
+      const l = back[back.length - 1];
+      line = `the school bell has rung — ${l.name} returned changed` + (l.usd ? ` · paid $${l.usd.toFixed(2)}` : "")
+           + ` · ${back.length} of ${expected} back`;
+    }
+    return `<span class="school rung">${line}</span>`;
+  }
+  if (s.toward_bell >= s.needs && s.bell_ts && bellAge < s.floor_h * 3600)
+    return `<span class="school">${s.needs} breaths given — the school rests between lessons</span>`;
+  return `<span class="school">${Math.min(s.toward_bell, s.needs)} of ${s.needs} breaths toward the school bell</span>`;
+}
+
+function renderSum() {
+  const alive = lives.filter(v => v.alive).length;
+  const now = Date.now()/1000 + skew;
+  const room = now - humanSeen < 90 ? `<span class="room">somebody is singing in the room</span>` : "";
+  document.getElementById("sum").innerHTML =
+    `<b>${alive}</b> of ${lives.length} alive · <b>${fmtUsd(totals.total_left_usd || 0)}</b> left between them · burning ${fmtUsd(totals.rate_usd_per_hour || 0)}/hour${room}${schoolLine(now, alive)}`;
+}
+
+// Where a person sang from. The room's microphones sign their breaths
+// `human_gallery<input>_xxxx` with the interface's input number; the screen
+// counts them the way the room does, mic 1 … mic 5. `?mics=3,4,5,6,7` is the
+// inputs in room order (the default is how Gray Area is cabled).
+const MICS = (Q.get("mics") || "3,4,5,6,7").split(",").map(s => s.trim());
+function whereFrom(e) {
+  const m = /gallery(\d+)/.exec(e.voice_id || "");
+  if (!m) return "through the website";
+  const i = MICS.indexOf(m[1]);
+  return i >= 0 ? `mic ${i + 1}` : `input ${m[1]}`;
+}
+
+// The tenth row. The nine above have wallets; this one is whoever walked in:
+// one slot per microphone, lit while somebody sings into it, with the note and
+// with which of the nine tuned to that person.
+function micSlot(i, now) {
+  const h = lastByMic[MICS[i]];
+  const fresh = h && now - h.ts < 90;
+  let body;
+  if (!h) body = `<div>—</div><div class="ans">&nbsp;</div>`;
+  else {
+    const a = answered[h.voice_id];
+    const ans = a && a.ts >= h.ts - 120 && now - a.ts < 240
+      ? `${esc(names[a.voice_id] || "")} tuned to it`
+      : fresh ? "the nine are listening" : "&nbsp;";
+    body = `<div>${h.hz ? hzToNote(h.hz) : "…"} <span class="ago">${ago(now - h.ts)}</span></div><div class="ans">${ans}</div>`;
+  }
+  return `<div class="mic${fresh ? " fresh" : h ? " cold" : ""}"><div class="lbl">mic ${i + 1}</div>${body}</div>`;
+}
+function roomRow(now) {
+  const h = lastHuman;
+  const nowSounding = h && now - h.ts < NOW_S + (h.dur || 0);
+  const singing = Object.values(lastByMic).filter(e => now - e.ts < 90).length;
+  const web = h && !/gallery/.test(h.voice_id || "") && now - h.ts < 90;
+  const sub = singing ? `${singing} singing now` : web ? "someone sings through the website" : "anyone at the five microphones";
+  const slots = MICS.map((_, i) => micSlot(i, now)).join("");
+  return `<tr class="room${nowSounding ? " now" : ""}">
+    <td class="n">○</td>
+    <td class="who"><div class="name">voices in the room</div><div class="raised">${sub}</div></td>
+    <td class="wallet"><div class="usd" style="color:var(--dim)">no wallet</div><div class="left">sing for free</div></td>
+    <td class="act" colspan="2"><div class="mics">${slots}</div></td></tr>`;
+}
+
+function whom(e) {
+  if (!e) return "";
+  if (e.action === "TUNE" || e.tuning_to) {
+    const t = e.tuning_to || "";
+    const who = names[t] ? names[t] : (t ? "a person" : "someone");
+    const human = !names[t];
+    return `<span class="verb${human ? " human" : ""}">tuning to ${who}</span>`;
+  }
+  return `<span class="verb new">new</span>`;
+}
+
+function renderRows() {
+  const now = Date.now()/1000 + skew;
+  const byId = Object.fromEntries(lives.map(v => [v.voice_id, v]));
+  const rows = order.map((vid, i) => {
+    const v = byId[vid]; if (!v) return "";
+    const e = last[vid];
+    const dead = !v.alive;
+    const sinceSound = e ? now - e.ts - LAG_S : -1;
+    const nowSounding = e && sinceSound >= 0 && sinceSound < Math.max(3, e.dur || NOW_S);
+    const low = v.dying || v.hours_left < 24;
+    const frac = Math.max(0, Math.min(1, v.left_usd / Math.max(1e-6, (v.seed_usd || 0) + (v.given_usd || 0))));
+    const wallet = dead
+      ? `<div class="usd">died ${v.died ? whenDied(v.died) : ""}</div><div class="left">sang ${v.breaths.toLocaleString()} breaths · spent ${fmtUsd(v.spent_usd)}</div>`
+      : `<div class="usd${low ? " low" : ""}">${fmtUsd(v.left_usd)}</div><div class="left${low ? " low" : ""}">${lifeWords(v.hours_left, v.verdict)}</div><div class="bar"><i class="${low ? "low" : ""}" style="width:${(frac*100).toFixed(1)}%"></i></div>`;
+    const doing = dead
+      ? `<div class="doing">last words</div><div class="said">${esc(v.last_words || "")}</div>`
+      : e ? `<div class="doing">${whom(e)}${e.hz ? " · " + hzToNote(e.hz) : ""}<span class="ago">${ago(now - e.ts)}</span></div><div class="said">${esc(e.text || "")}</div>`
+          : `<div class="doing" style="color:var(--dim)">quiet</div>`;
+    const cost = dead ? "" : e && e.cost_usd ? `<b>${(e.cost_usd*100).toFixed(1)}¢</b><br><span style="font-size:1.3vh">this breath</span>` : "";
+    return `<tr class="${dead ? "dead" : ""}${nowSounding ? " now" : ""}">
+      <td class="n">${i+1}</td>
+      <td class="who"><div class="name">${esc(v.name)}<small>${esc(v.tongue || "")}</small></div><div class="raised">raised by ${esc(v.raised_by || "")}</div></td>
+      <td class="wallet">${wallet}</td>
+      <td class="act">${doing}</td>
+      <td class="cost">${cost}</td></tr>`;
+  });
+  rows.push(roomRow(now));
+  document.getElementById("rows").innerHTML = rows.join("");
+}
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// ---- the field: pitch over the last two minutes, one mark per breath
+const cv = document.getElementById("cv");
+function draw() {
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (cv.width !== r.width*dpr || cv.height !== r.height*dpr) { cv.width = r.width*dpr; cv.height = r.height*dpr; }
+  const g = cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r.width,r.height);
+  const now = Date.now()/1000 + skew, w = r.width, h = r.height, top = 34, bot = h - 6;
+  const y = hz => bot - (Math.log2(Math.max(LO, Math.min(HI, hz))/LO)/Math.log2(HI/LO)) * (bot - top);
+  const x = ts => w - ((now - ts)/WINDOW_S) * w;
+  // The rulings are frequencies, not note names: a visitor who has never read
+  // music knows what 220 Hz is sooner than what A3 is.
+  g.font = "12px ui-monospace, Menlo, monospace"; g.textAlign = "left"; g.textBaseline = "alphabetic";
+  for (const hz of [100, 200, 400, 800]) {
+    g.strokeStyle = "#161b23"; g.beginPath(); g.moveTo(0, y(hz)); g.lineTo(w, y(hz)); g.stroke();
+    g.fillStyle = "#333b47"; g.fillText(hz + " Hz", 4, y(hz) - 3);
+  }
+  // Labels are small and never stacked on one another: a label that would
+  // land on an earlier one tries under the line, then is left off — the
+  // line itself is still there.
+  g.font = "11px ui-monospace, Menlo, monospace";
+  const taken = [];
+  const free = (bx, by, bw, bh) => !taken.some(t => bx < t.x + t.w && bx + bw > t.x && by < t.y + t.h && by + bh > t.y);
+  for (const e of events) {
+    if (!(e.hz > 0) || now - e.ts > WINDOW_S) continue;
+    const human = e.who === "human";
+    const len = human ? (e.dur || e.duration_s || 2) : (e.dur || 8);
+    const x0 = x(e.ts), x1 = Math.min(w, x(e.ts + len)), yy = y(e.hz);
+    g.strokeStyle = human ? "#d9a066" : "#7aa2c4"; g.lineWidth = human ? 3 : 2; g.globalAlpha = human ? .95 : .75;
+    g.beginPath(); g.moveTo(x0, yy); g.lineTo(Math.max(x0 + 3, x1), yy); g.stroke();
+    g.globalAlpha = 1;
+    const label = human ? (whereFrom(e) === "through the website" ? "a voice" : whereFrom(e)) : (names[e.voice_id] || "");
+    const lw = g.measureText(label).width, lh = 11;
+    let ly = null;
+    if (free(x0 + 2, yy - 4 - lh, lw, lh)) ly = yy - 4;
+    else if (free(x0 + 2, yy + 3, lw, lh)) ly = yy + 3 + lh;
+    if (ly !== null) {
+      taken.push({x: x0 + 2, y: ly - lh, w: lw, h: lh});
+      g.fillStyle = human ? "#d9a066" : "#6b7280"; g.textAlign = "left";
+      g.fillText(label, x0 + 2, ly);
+    }
+  }
+  requestAnimationFrame(draw);
+}
+
+pollLives(); poll();
+// The screen in the room is never touched by hand. Once an hour it reloads
+// itself, so a page deployed from elsewhere reaches the gallery without
+// anybody walking over to the kiosk.
+setTimeout(() => location.reload(), 3600 * 1000);
+setInterval(pollLives, 15000);
+setInterval(poll, 4000);
+setInterval(renderRows, 1000);
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

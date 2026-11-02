@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuning · the circle</title>
+<!--
+  The third screen for the room at Gray Area: a map of the room itself.
+
+  The room is a circle and a point. Nine speakers stand on a sixteen-foot ring
+  with a gap for the door; five microphones stand in the middle, facing in, so
+  the people sing to each other and the choir sings around them. This page
+  draws exactly that, as seen from the door: the gap is at the bottom, the
+  speakers run clockwise from the left of the door, and the microphones are
+  the small circle in the centre.
+
+  Each speaker is a dot with its model's name, who raised it, and what is left
+  in its wallet. When it breathes, the dot flares, the note appears under the
+  name, the words it sang appear beneath, and a thread is drawn to whoever it
+  tuned to — another dot, or one of the microphones. A microphone lights with
+  the note sung into it. A dead voice is a hollow dot with the day it died.
+
+  Reads only `/lives` and `/field`. Plays nothing, hears nothing.
+  URL: /circle  (?order=voice_08,voice_00,… is the speakers from the left of
+  the door, clockwise; ?mics=3,4,5,6,7 is the interface inputs in room order).
+-->
+<style>
+  :root {
+    --bg: #07090c; --ink: #e8e6e1; --dim: #6b7280; --faint: #333b47;
+    --line: #161b23; --warm: #d9a066; --cool: #7aa2c4; --dead: #4a4f58;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --voice: "Helvetica Neue", Inter, "Suisse Intl", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: var(--voice); font-weight: 380; overflow: hidden; }
+  body { display: grid; grid-template-rows: auto 1fr auto; padding: 2.2vh 2.4vw 1.6vh; gap: 1vh; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid var(--line); padding-bottom: 1vh; }
+  header h1 { margin: 0; font-size: 2.1vh; font-weight: 400; letter-spacing: .14em; text-transform: uppercase; }
+  header h1 span { color: var(--dim); letter-spacing: 0; text-transform: none; margin-left: 1.2em; font-size: 1.9vh; }
+  header .sum { font-family: var(--mono); font-size: 1.7vh; color: var(--dim); }
+  header .sum b { color: var(--ink); font-weight: 400; }
+  header .sum .room { color: var(--warm); margin-left: 1.6em; }
+
+  #map { position: relative; }
+  #map canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  footer { font-size: 1.6vh; color: var(--dim); line-height: 1.4; border-top: 1px solid var(--line); padding-top: 1vh;
+    display: flex; justify-content: space-between; align-items: center; gap: 3vw; }
+  footer b { color: var(--ink); font-weight: 400; }
+  footer .qr { display: flex; align-items: center; gap: 1.2vw; flex: 0 0 auto; }
+  footer .qr img { width: 11vh; height: 11vh; border-radius: .4vh; }
+  footer .qr div { font-size: 1.5vh; max-width: 18vw; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tuning <span>nine language models perform Pauline Oliveros's Tuning Meditation (1971), day and night</span></h1>
+  <div class="sum" id="sum">…</div>
+</header>
+
+<div id="map"><canvas id="cv"></canvas></div>
+
+<footer>
+  <div>The room, seen from the door. <b>Nine speakers</b> on the ring, one language model each; <b>five microphones</b> in the middle. Each voice pays for every breath from its own wallet — GPU time, at cost. <b>When the wallet is empty, the voice dies</b> and its speaker falls silent for good.</div>
+  <div>A dot flares when that speaker sings; the <b>note</b> and the <b>words</b> appear under it. A <b>thread</b> runs to the voice it tuned to — or to <span style="color:var(--warm)">a microphone</span>, if it tuned to you. Step into the middle and sing: they hear you.</div>
+  <div class="qr"><img src="/qr.png" alt=""><div>You can join the choir from your phone.</div></div>
+</footer>
+
+<script>
+(() => {
+const Q = new URLSearchParams(location.search);
+const NOW_S = 8;                 // a machine breath is heard at least this long (the choir's floor)
+// The room's player fetches a breath after the choir writes it, so the speaker
+// sounds a few seconds after the log's timestamp. The screen waits the same.
+const LAG_S = Math.max(0, parseFloat(Q.get("lag") || "4") || 0);
+const WORDS_S = 6;               // its words stay this much longer than the sound
+const THREAD_S = 10;             // a thread is drawn for this long
+const HUMAN_S = 90;              // a microphone stays warm this long after a note
+const FLARE_S = 1.6;             // the ring that widens out of a dot on its onset
+const NOTE = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const hzToNote = hz => { if (!(hz > 0)) return ""; const s = Math.round(12*Math.log2(hz/440)); return NOTE[((s+9)%12+12)%12] + (4 + Math.floor((s+9)/12)); };
+const fmtUsd = v => "$" + (v >= 100 ? v.toFixed(0) : v.toFixed(2));
+const ago = s => s < 60 ? Math.round(s) + " s ago" : s < 3600 ? Math.round(s/60) + " min ago" : Math.round(s/3600) + " h ago";
+const lifeWords = (h, verdict) => verdict ? verdict :
+  h >= 48 ? Math.round(h/24) + " days left" : h >= 1.5 ? Math.round(h) + " hours left" : "dies within the hour";
+const whenDied = ts => { const d = new Date(ts*1000); return d.toLocaleDateString("en-US",{weekday:"short"}) + " " + d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:false}); };
+
+// The room: inputs of the interface in room order, so `human_gallery5_…` is "mic 3".
+const MICS = (Q.get("mics") || "3,4,5,6,7").split(",").map(s => s.trim());
+const micIndex = vid => { const m = /gallery(\d+)/.exec(vid || ""); if (!m) return -1; return MICS.indexOf(m[1]); };
+
+let lives = [], order = [], byId = {}, totals = {}, skew = 0, since = 0;
+const names = {};
+const last = {};                 // newest machine breath per voice
+const threads = [];              // {from, to:{vid}|{mic}, at}
+const lastMic = {};              // mic index -> newest human breath into it
+let lastHuman = null, humanSeen = 0;
+
+async function pollLives() {
+  try {
+    const d = await (await fetch("/lives", {cache: "no-store"})).json();
+    lives = d.voices || []; totals = d;
+    for (const v of lives) { names[v.voice_id] = v.name; byId[v.voice_id] = v; }
+    if (!order.length) order = (Q.get("order") || "").split(",").filter(Boolean);
+    if (!order.length) order = lives.map(v => v.voice_id);
+    renderSum();
+  } catch (e) {}
+}
+
+async function poll() {
+  try {
+    const d = await (await fetch(since ? `/field?since=${since}` : "/field?limit=80", {cache: "no-store"})).json();
+    const fresh = d.recent || [];
+    for (const e of fresh) {
+      if (e.ts > since) since = e.ts;
+      if (e.who === "model") {
+        last[e.voice_id] = e;
+        if (e.tuning_to) {
+          const to = names[e.tuning_to] ? {vid: e.tuning_to} : {mic: micIndex(e.tuning_to)};
+          threads.push({from: e.voice_id, to, at: e.ts});
+        }
+      } else if (e.who === "human") {
+        humanSeen = Math.max(humanSeen, e.ts);
+        if (!lastHuman || e.ts >= lastHuman.ts) lastHuman = e;
+        const i = micIndex(e.voice_id);
+        if (i >= 0 && (!lastMic[i] || e.ts >= lastMic[i].ts)) lastMic[i] = e;
+      }
+    }
+    if (fresh.length) skew = since - Date.now()/1000;   // the server's clock, roughly
+    const cut = since - 600;
+    while (threads.length && threads[0].at < cut) threads.shift();
+    renderSum();
+  } catch (e) {}
+}
+
+function renderSum() {
+  const alive = lives.filter(v => v.alive).length;
+  const now = Date.now()/1000 + skew;
+  const room = now - humanSeen < HUMAN_S ? `<span class="room">somebody is singing in the room</span>` : "";
+  document.getElementById("sum").innerHTML =
+    `<b>${alive}</b> of ${lives.length} alive · <b>${fmtUsd(totals.total_left_usd || 0)}</b> left between them · burning ${fmtUsd(totals.rate_usd_per_hour || 0)}/hour${room}`;
+}
+
+// ---- geometry. The door is at the bottom; the speakers run clockwise from its left.
+const GAP_DEG = 44;
+function speakerPoints(cx, cy, r) {
+  const n = order.length || 9, step = (360 - GAP_DEG) / Math.max(1, n - 1);
+  return order.map((vid, i) => {
+    const th = (GAP_DEG/2 + i*step) * Math.PI/180;       // clockwise from the bottom
+    return {vid, x: cx - r*Math.sin(th), y: cy + r*Math.cos(th), th};
+  });
+}
+function micPoints(cx, cy, r) {
+  const n = MICS.length;
+  return MICS.map((_, i) => {
+    const th = (Math.PI/n) + i*(2*Math.PI/n);              // a gap toward the door
+    return {i, x: cx - r*Math.sin(th), y: cy + r*Math.cos(th)};
+  });
+}
+
+// ---- drawing
+const cv = document.getElementById("cv");
+const wrap = (g, text, maxW) => {            // the words a voice sang, in up to two lines
+  const words = String(text || "").split(/\s+/), lines = [];
+  let cur = "";
+  for (const w of words) {
+    const t = cur ? cur + " " + w : w;
+    if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; if (lines.length === 2) break; }
+    else cur = t;
+  }
+  if (lines.length < 2 && cur) lines.push(cur);
+  if (lines.length === 2 && (words.join(" ") !== lines.join(" "))) lines[1] = lines[1].replace(/\s*\S*$/, "") + " …";
+  return lines;
+};
+
+function draw() {
+  const r0 = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (cv.width !== r0.width*dpr || cv.height !== r0.height*dpr) { cv.width = r0.width*dpr; cv.height = r0.height*dpr; }
+  const g = cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r0.width,r0.height);
+  const W = r0.width, H = r0.height, vh = H/100;
+  const now = Date.now()/1000 + skew;
+  const cx = W/2, cy = H/2 - 1*vh, R = Math.min(W*0.36, H*0.40), RM = R*0.3;
+  const sp = speakerPoints(cx, cy, R), mp = micPoints(cx, cy, RM);
+  const at = {}; for (const p of sp) at[p.vid] = p;
+  const font = (px, mono) => g.font = `${px}px ${mono ? "ui-monospace, Menlo, monospace" : '"Helvetica Neue", Inter, system-ui, sans-serif'}`;
+
+  // the ring and the door
+  g.strokeStyle = "#161b23"; g.lineWidth = 1.2; g.setLineDash([]);
+  g.beginPath(); g.arc(cx, cy, R, (90 + GAP_DEG/2 - 6) * Math.PI/180, (90 - GAP_DEG/2 + 6 + 360) * Math.PI/180); g.stroke();
+  g.fillStyle = "#333b47"; font(1.5*vh, true); g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText("the door", cx, cy + R + 2.2*vh);
+  g.strokeStyle = "#161b23"; g.beginPath(); g.arc(cx, cy, RM, 0, Math.PI*2); g.stroke();
+
+  // threads: who is tuning to whom
+  for (const t of threads) {
+    const age = now - t.at - LAG_S; if (age < 0 || age > THREAD_S) continue;
+    const a = at[t.from]; if (!a) continue;
+    let b = null, warm = false;
+    if (t.to.vid) b = at[t.to.vid];
+    else { warm = true; b = t.to.mic >= 0 ? mp[t.to.mic] : {x: cx, y: cy}; }
+    if (!b) continue;
+    const k = 1 - age/THREAD_S;
+    g.strokeStyle = warm ? `rgba(217,160,102,${0.15 + 0.6*k})` : `rgba(122,162,196,${0.12 + 0.5*k})`;
+    g.lineWidth = 1 + 1.2*k; g.setLineDash([]);
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+    // a small head at the one being tuned to
+    g.fillStyle = g.strokeStyle; g.beginPath(); g.arc(b.x, b.y, 2.2 + 1.5*k, 0, Math.PI*2); g.fill();
+  }
+
+  // the microphones
+  for (const p of mp) {
+    const h = lastMic[p.i], age = h ? now - h.ts : 1e9;
+    const fresh = age < HUMAN_S, dur = h ? Math.max(1, h.dur || 2) : 0;
+    const sounding = age < dur + 1.5;
+    if (age < FLARE_S) { const k = age/FLARE_S; g.strokeStyle = `rgba(217,160,102,${0.8*(1-k)})`; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 1.2*vh + k*4*vh, 0, Math.PI*2); g.stroke(); }
+    g.fillStyle = sounding ? "#d9a066" : fresh ? "rgba(217,160,102,.55)" : "#333b47";
+    g.beginPath(); g.arc(p.x, p.y, sounding ? 1.1*vh : 0.8*vh, 0, Math.PI*2); g.fill();
+    const ux = (p.x - cx)/RM, uy = (p.y - cy)/RM;              // outward from the middle
+    const lx = p.x + ux*2.2*vh, ly = p.y + uy*2.2*vh;
+    g.textAlign = ux < -0.35 ? "right" : ux > 0.35 ? "left" : "center"; g.textBaseline = "middle";
+    font(1.5*vh, true); g.fillStyle = fresh ? "#d9a066" : "#6b7280";
+    g.fillText(`mic ${p.i + 1}`, lx, ly - (fresh && h.hz ? 1.1*vh : 0));
+    if (fresh && h.hz) { font(2.2*vh, true); g.fillStyle = sounding ? "#e8e6e1" : "#d9a066"; g.fillText(hzToNote(h.hz), lx, ly + 1.4*vh); }
+  }
+  // the words in the middle: who is singing in the room
+  g.textAlign = "center"; g.textBaseline = "middle"; font(1.5*vh, true);
+  const singing = Object.values(lastMic).filter(e => now - e.ts < HUMAN_S).length;
+  g.fillStyle = singing ? "#d9a066" : "#333b47";
+  g.fillText(singing ? (singing === 1 ? "a voice in the room" : `${singing} voices in the room`) : "the microphones", cx, cy);
+
+  // the speakers
+  for (const p of sp) {
+    const v = byId[p.vid]; if (!v) continue;
+    const e = last[p.vid], age = e ? now - e.ts - LAG_S : 1e9;   // since the speaker began
+    const dead = !v.alive;
+    const dur = e ? Math.max(3, e.dur || NOW_S) : NOW_S;
+    const sounding = !dead && age >= 0 && age < dur;
+    const human = e && e.tuning_to && !names[e.tuning_to];
+    const big = v.name === "gpt-2" || v.name === "voxtral";   // the two large speakers
+    const base = (big ? 1.25 : 1.0) * vh;
+    // the flare on the onset of a breath
+    if (sounding && age < FLARE_S) { const k = age/FLARE_S; g.strokeStyle = `rgba(122,162,196,${0.8*(1-k)})`; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, base + k*5*vh, 0, Math.PI*2); g.stroke(); }
+    // the dot
+    if (dead) { g.strokeStyle = "#4a4f58"; g.lineWidth = 1.4; g.beginPath(); g.arc(p.x, p.y, base, 0, Math.PI*2); g.stroke(); }
+    else {
+      const breathe = sounding ? 1 + 0.12*Math.sin(now*6) : 1;
+      g.fillStyle = sounding ? "#7aa2c4" : "#3f5a73";
+      g.beginPath(); g.arc(p.x, p.y, base*breathe, 0, Math.PI*2); g.fill();
+    }
+    // the labels, pushed outward from the ring so they never cross it
+    const ox = -Math.sin(p.th), oy = Math.cos(p.th);            // unit vector outward
+    const side = ox < -0.3 ? "right" : ox > 0.3 ? "left" : "center";
+    const lx = p.x + ox*2.4*vh, ly0 = p.y + oy*2.4*vh;
+    g.textAlign = side; g.textBaseline = "middle";
+    const lines = [];
+    font(2.4*vh, false); lines.push({t: v.name, f: 2.4, c: dead ? "#4a4f58" : sounding ? "#e8e6e1" : "#c9c7c2", strike: dead});
+    lines.push({t: `raised by ${v.raised_by || ""}`, f: 1.45, c: dead ? "#3b3f47" : "#6b7280", maxW: 36*vh});
+    if (dead) lines.push({t: `died ${v.died ? whenDied(v.died) : ""} · sang ${v.breaths.toLocaleString()} breaths`, f: 1.5, c: "#4a4f58", mono: true});
+    else {
+      const low = v.dying || v.hours_left < 24;
+      lines.push({t: `${fmtUsd(v.left_usd)} · ${lifeWords(v.hours_left, v.verdict)}`, f: 1.55, c: low ? "#d9a066" : "#6b7280", mono: true});
+      if (e && age >= 0 && age < dur + WORDS_S) {
+        const whom = e.tuning_to ? (names[e.tuning_to] ? `tuning to ${names[e.tuning_to]}` : "tuning to a person") : "a new tone";
+        lines.push({t: `${e.hz ? hzToNote(e.hz) + " · " : ""}${whom}`, f: 1.9, c: human ? "#d9a066" : e.tuning_to ? "#7aa2c4" : "#e8e6e1", mono: true});
+        if (e.text) for (const w of wrap((font(1.6*vh, false), g), String(e.text), 24*vh)) lines.push({t: w, f: 1.6, c: sounding ? "#c9c7c2" : "#7b8089"});
+      }
+    }
+    // stack: downward if the label is below the ring's middle, upward if above
+    const total = lines.reduce((s, l) => s + l.f*vh*1.25, 0);
+    let y = oy > 0.3 ? ly0 : oy < -0.3 ? ly0 - total + lines[0].f*vh : ly0 - total/2 + lines[0].f*vh*0.6;
+    for (const l of lines) {
+      font(l.f*vh, l.mono); g.fillStyle = l.c;
+      let t = l.t;
+      if (l.maxW) while (t.length > 4 && g.measureText(t).width > l.maxW) t = t.replace(/\s*\S*…?$/, "") + "…";
+      g.fillText(t, lx, y);
+      if (l.strike) { const w = g.measureText(t).width; const x0 = side === "left" ? lx : side === "right" ? lx - w : lx - w/2; g.strokeStyle = l.c; g.lineWidth = 1; g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + w, y); g.stroke(); }
+      y += l.f*vh*1.25;
+    }
+  }
+  requestAnimationFrame(draw);
+}
+
+pollLives(); poll();
+// The screen in the room is never touched by hand. Once an hour it reloads
+// itself, so a page deployed from elsewhere reaches the gallery without
+// anybody walking over to the kiosk.
+setTimeout(() => location.reload(), 3600 * 1000);
+setInterval(pollLives, 15000);
+setInterval(poll, 4000);
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

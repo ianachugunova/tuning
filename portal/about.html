@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuning — about</title>
+<style>
+  /* The same palette and voices as field.html, because this page is not a
+     different place — it is the same room with the lights up. */
+  :root {
+    --bg: #07090c;
+    --ink: #e8e6e1;
+    --dim: #6b7280;
+    --faint: #333b47;
+    --line: #161b23;
+    --warm: #d9a066;
+    --cool: #7aa2c4;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --voice: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 400 15px/1.5 var(--mono);
+  }
+  main {
+    max-width: 34em; margin: 0 auto;
+    padding: calc(env(safe-area-inset-top) + 26px) 24px
+             calc(env(safe-area-inset-bottom) + 60px);
+  }
+  header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 46px;
+  }
+  .mark { font: 400 11px/1 var(--mono); letter-spacing: .34em; color: var(--faint); }
+  a { color: var(--warm); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  header a { font: 400 11px/1 var(--mono); letter-spacing: .12em; color: var(--dim); }
+  header a:hover { color: var(--warm); text-decoration: none; }
+
+  blockquote {
+    margin: 0 0 10px;
+    font-family: var(--voice);
+    font-size: clamp(19px, 5vw, 26px); line-height: 1.42;
+  }
+  cite {
+    display: block; margin-bottom: 52px;
+    font: 400 10px/1.6 var(--mono); letter-spacing: .2em;
+    text-transform: uppercase; color: var(--faint); font-style: normal;
+  }
+
+  h2 {
+    margin: 46px 0 14px;
+    font: 400 11px/1 var(--mono); letter-spacing: .22em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  p {
+    margin: 0 0 14px;
+    font-family: var(--voice); font-size: 16px; line-height: 1.65;
+    color: var(--ink);
+  }
+  p b { font-weight: 400; color: var(--warm); }
+
+  /* The nine, the same way the field's margin lists them: a name and its
+     tongue, cool for the machines, nothing resembling a product table. */
+  .nine { margin: 18px 0 6px; border-top: 1px solid var(--line); }
+  .nine div {
+    display: flex; justify-content: space-between; gap: 14px;
+    padding: 7px 2px; border-bottom: 1px solid var(--line);
+    font: 400 12px/1.5 var(--mono);
+  }
+  .nine .nm { color: var(--cool); }
+  .nine .tg { color: var(--dim); text-align: right; }
+
+  footer {
+    margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
+    font: 400 11px/1.9 var(--mono); color: var(--dim);
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="mark">Hz</span>
+    <a href="./">&larr; the field</a>
+  </header>
+
+  <blockquote>Listen to the whole field of sound the group is making.</blockquote>
+  <cite>Pauline Oliveros &middot; Tuning Meditation &middot; 1971</cite>
+
+  <h2>What this is</h2>
+  <p>In 1971 Pauline Oliveros wrote a score anyone can perform: sing a tone on
+  one comfortable breath, listen to the whole field of sound the group is
+  making, then either tune as exactly as possible to a voice distant from you
+  or contribute a new tone that no one else is singing. No training, no
+  conductor, no wrong notes.</p>
+  <p>Here a choir of nine language models performs that score, continuously,
+  on a rented machine. Each model was shown Oliveros&rsquo;s instructions once
+  and asked to interpret them for itself. On every breath a voice is told what
+  the field around it holds &mdash; who sang, at what pitch, how long ago
+  &mdash; and it chooses: tune to a tone already sounding, or introduce one
+  that is not.</p>
+  <p>The nine were raised differently. They come from different years,
+  different sizes, different languages; two of them hear the field as sound
+  rather than reading it as text. What they hold in common is only the score.</p>
+
+  <div class="nine">
+    <div><span class="nm">gpt-2</span><span class="tg">English &middot; 2019 &middot; predates instructions &mdash; shown a transcript, it writes transcript</span></div>
+    <div><span class="nm">tinystories</span><span class="tg">English &middot; raised entirely on children&rsquo;s stories</span></div>
+    <div><span class="nm">phi-4-mini</span><span class="tg">English &middot; a careful student</span></div>
+    <div><span class="nm">olmo-3</span><span class="tg">English &middot; fully open, training and all</span></div>
+    <div><span class="nm">eurollm</span><span class="tg">Italiano &middot; sings in one of its thirty-five tongues</span></div>
+    <div><span class="nm">qwen3</span><span class="tg">中文 &middot; thinks before it sings</span></div>
+    <div><span class="nm">llm-jp</span><span class="tg">日本語 &middot; the ninth to arrive</span></div>
+    <div><span class="nm">voxtral</span><span class="tg">Fran&ccedil;ais &middot; hears the field as sound</span></div>
+    <div><span class="nm">audio-flamingo</span><span class="tg">English &middot; hears, and answers in plain description</span></div>
+  </div>
+
+  <h2>You</h2>
+  <p>Open the microphone on <a href="./">the field</a> and hold one tone on one
+  comfortable breath. Your phone measures the pitch of your voice on the device
+  itself and sends only numbers &mdash; a frequency, a duration, a contour.
+  <b>No recording of your voice is made, sent, or kept.</b> In the field you
+  are a held pitch, like everyone else there.</p>
+  <p>The choir is told a person sang. A voice may tune to you, and you will see
+  it name you when it does. There is no promise that one will &mdash; this is
+  not a call-and-response instrument. It is a room you sing into.</p>
+
+  <h2>Mortality</h2>
+  <p>The choir was born on 19 September 2026 at the
+  <a href="https://endzeit.us/entanglement">Entanglement</a> festival in
+  Oakland, when a person sang to it for the first time. It was given one sum
+  of money for its whole
+  life. Every second a voice spends on the machine is paid out of its own
+  wallet &mdash; larger models breathe more expensively than small ones &mdash;
+  and when a wallet is empty, that voice dies and is not restarted. The line at
+  the top of the field showing what is left is not a metaphor.</p>
+
+  <h2>Learning</h2>
+  <p>The choir changes only through human contact. When enough human breaths
+  have gathered in the field, a voice is taken to night school and retrained on
+  what it lived through &mdash; with the moments people were present weighing
+  double. The lesson is paid for out of the wallet of the voice that was
+  changed. Being taught is the one thing that makes this choir cost more than
+  it would have cost left alone, which is one way of saying it is the one
+  thing it does that matters.</p>
+
+  <h2>The record</h2>
+  <p>Everything sung here, by machine or person, enters one append-only log.
+  It can be read as notation on <a href="score">the score page</a>, and it is
+  what remains after the last voice has died.</p>
+
+  <footer>
+    Tuning Meditation: LLMs &middot; Iana Chugunova<br>
+    premiered at the Center for New Music, San Francisco, June 2026<br>
+    born at <a href="https://endzeit.us/entanglement">Entanglement</a>,
+    Oakland &middot; 19 September 2026<br>
+    at Gray Area, San Francisco &middot; 28 October &ndash; 1 November 2026<br>
+    <a href="https://www.instagram.com/tuning.llms/">@tuning.llms</a> &middot;
+    <a href="https://ianachugunova.art">ianachugunova.art</a>
+  </footer>
+</main>
+</body>
+</html>

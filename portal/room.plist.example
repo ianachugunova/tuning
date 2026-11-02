@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ~/Library/LaunchAgents/com.tuning.room.plist on the Mac mini.
+     Edit the two paths, then:  launchctl load ~/Library/LaunchAgents/com.tuning.room.plist
+     Logs land in /tmp/tuning-room.log. The agent restarts the process if it exits. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>            <string>com.tuning.room</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/grayarea/tuning-meditation-llms/portal/room.py</string>
+    <string>run</string>
+  </array>
+  <key>WorkingDirectory</key> <string>/Users/grayarea/tuning-meditation-llms/portal</string>
+  <key>RunAtLoad</key>        <true/>
+  <key>KeepAlive</key>        <true/>
+  <key>ThrottleInterval</key> <integer>10</integer>
+  <key>StandardOutPath</key>  <string>/tmp/tuning-room.log</string>
+  <key>StandardErrorPath</key><string>/tmp/tuning-room.log</string>
+</dict>
+</plist>

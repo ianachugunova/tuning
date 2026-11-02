@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuning — the field</title>
+<style>
+  /* The palette is the one the project already committed to in writing:
+     near-black, off-white, warm amber. `modal/EXHIBITION.md` §"экраны",
+     `modal/social_media.md`. Cool blue is the machines' colour and is used
+     for nothing else. */
+  :root {
+    --bg: #07090c;
+    --ink: #e8e6e1;
+    --dim: #6b7280;
+    --faint: #333b47;
+    --line: #161b23;
+    --warm: #d9a066;
+    --cool: #7aa2c4;
+
+    /* The work's voice, chosen: three candidates were switchable on the live
+       page for a while, judged against real breaths rather than a specimen
+       sheet, and the grotesk won. The switcher is gone — a person entering the
+       field has no reason to be offered typography. The field's own numbers
+       are always mono; that is notation, not styling. */
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --voice: "Helvetica Neue", Inter, "Suisse Intl", system-ui, -apple-system, sans-serif;
+    --voice-tracking: -.008em;
+    --voice-weight: 380;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 400 15px/1.5 var(--mono);
+    overscroll-behavior: none;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ---------- the threshold ---------------------------------------------
+     There is no arrival on the current page: a stranger lands inside a
+     measurement screen. This is the arrival. It does not withhold the
+     button — Endzeit is a rave and attention there is ten seconds long —
+     it only makes the first thing on screen the sentence the whole piece
+     is an implementation of. */
+  #veil {
+    position: fixed; inset: 0; z-index: 20;
+    /* Opaque on purpose. At 93% the lit microphone pill and the ticker read
+       straight through the threshold and it stopped being a threshold. The
+       field is revealed by the fade-out, not by bleed-through. */
+    background: radial-gradient(120% 78% at 50% 40%, #0d1016 0%, #05060a 64%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: space-between;
+    padding: calc(env(safe-area-inset-top) + 26px) 24px
+             calc(env(safe-area-inset-bottom) + 26px);
+    transition: opacity .9s ease, visibility .9s;
+  }
+  #veil.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+  .mark {
+    font: 400 11px/1 var(--mono);
+    letter-spacing: .34em; color: var(--faint);
+    text-transform: none;
+  }
+
+  #veil > .mark { align-self: flex-start; }
+
+  #veilBody { max-width: 27em; text-align: center; }
+
+  /* Page one of the threshold: the name of the work and one sentence of what
+     it is. Nothing to read yet, nothing to decide. */
+  #veilTitle {
+    margin: 0;
+    font-family: var(--voice);
+    font-weight: var(--voice-weight);
+    letter-spacing: var(--voice-tracking);
+    font-size: clamp(30px, 8.4vw, 46px);
+    line-height: 1.12;
+    color: var(--ink);
+    opacity: 0; animation: settle 2.4s .25s forwards;
+  }
+  #veilWhat {
+    margin: 22px auto 0; max-width: 21em;
+    font-family: var(--voice);
+    font-weight: var(--voice-weight);
+    letter-spacing: var(--voice-tracking);
+    font-size: clamp(15px, 4vw, 17px);
+    line-height: 1.55;
+    color: var(--dim);
+    opacity: 0; animation: settle 2.4s 1.1s forwards;
+  }
+
+  /* Page two: the score itself, word for word, as the instruction. Oliveros
+     wrote it as one — six sentences for people with no training — and any
+     paraphrase would only be longer and worse. The `hidden` attribute keeps it
+     off screen until the first button; removing `hidden` restarts the settle
+     animations, so the score arrives the way the title did. */
+  #veilBody blockquote {
+    margin: 0; text-align: left;
+    font-family: var(--voice);
+    font-weight: var(--voice-weight);
+    letter-spacing: var(--voice-tracking);
+    font-size: clamp(15px, 4.2vw, 19px);
+    line-height: 1.5;
+    color: var(--ink);
+    opacity: 0; animation: settle 2.4s .25s forwards;
+  }
+  #veilBody blockquote span { display: block; }
+  #veilBody blockquote span + span { margin-top: .72em; }
+  #veilBody cite {
+    display: block; margin-top: 22px;
+    font: 400 10px/1.6 var(--mono);
+    letter-spacing: .2em; text-transform: uppercase;
+    color: var(--faint); font-style: normal;
+    opacity: 0; animation: settle 2.4s 1.1s forwards;
+  }
+  /* The one practical hint the score cannot give, because it predates the
+     device: where the microphone is, and that no recording ever leaves. */
+  #veilHint {
+    margin: 18px auto 0; max-width: 24em;
+    font: 400 10px/1.7 var(--mono); letter-spacing: .06em;
+    color: var(--faint);
+    opacity: 0; animation: settle 2.4s 1.6s forwards;
+  }
+  @keyframes settle { to { opacity: 1; } }
+
+  #veilFoot { text-align: center; }
+  /* The quieter of the two doors. A person is never made to read before they
+     may sing, but the one who wants to know what this is should not have to
+     sing first to find out. */
+  #veilAbout {
+    display: block; margin-top: 18px;
+    font: 400 10px/1 var(--mono); letter-spacing: .14em;
+    color: var(--faint); text-decoration: none;
+    transition: color .3s;
+  }
+  #veilAbout:hover { color: var(--dim); }
+  #enter, #begin {
+    margin-top: 16px; padding: 13px 30px;
+    font: 400 13px/1 var(--mono); letter-spacing: .12em;
+    text-transform: uppercase;
+    background: transparent; color: var(--ink);
+    border: 1px solid #2b333f; border-radius: 999px;
+    cursor: pointer; transition: border-color .3s, color .3s;
+  }
+  #enter:hover, #begin:hover { border-color: var(--warm); color: var(--warm); }
+  #enter[hidden], #begin[hidden] { display: none; }
+
+  /* ---------- the stage -------------------------------------------------- */
+  #stage {
+    flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 14px; padding: 14px 18px 10px;
+  }
+  header .mark a {
+    color: var(--faint); text-decoration: none; margin-left: 14px;
+    letter-spacing: .14em; transition: color .3s;
+  }
+  header .mark a:hover { color: var(--dim); }
+  /* One number, not a panel. `modal/EXHIBITION.md`: "цель — пульс, а не
+     дашборд… в зале одно число". No burn rate, no bar, no countdown. */
+  #pulse {
+    font: 400 11px/1.5 var(--mono); letter-spacing: .05em;
+    color: var(--dim); text-align: right;
+  }
+  #pulse b { color: var(--ink); font-weight: 400; }
+
+  /* ---------- the field -------------------------------------------------- */
+  #fieldWrap {
+    flex: 1 1 auto; position: relative; min-height: 220px;
+    display: flex; align-items: stretch;
+  }
+  #fieldWrap canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  }
+
+  /* The nine, in the margin. Not cards and not a dashboard: a name and how
+     much light is on it. A voice brightens when it sings and fades as it
+     falls silent; a dead one keeps a low permanent glow, because
+     `modal/EXHIBITION.md` is explicit that a dark screen in a gallery reads
+     as a flat battery and not as a grave. */
+  #nine {
+    position: relative; z-index: 2; margin-left: auto;
+    padding: 10px 18px 10px 8px;   /* 18px right to sit on the same margin as
+                                      the header, ticker and footer */
+    display: flex; flex-direction: column; justify-content: center; gap: 0;
+    pointer-events: none;
+  }
+  .v {
+    font: 400 10px/1.5 var(--mono);
+    letter-spacing: .04em; text-align: right;
+    padding: 3px 0; white-space: nowrap;
+    transition: color .7s ease, opacity .7s ease;
+  }
+  .v .nm { color: var(--cool); }
+  .v .tg { color: var(--faint); font-size: 9px; margin-left: 7px; }
+  .v.dead .nm { color: var(--ink); text-decoration: line-through;
+                text-decoration-thickness: 1px; }
+  .v.dead .tg { color: var(--dim); }
+  /* Not yet born is not the same as not there. --faint at .3 opacity came out
+     invisible, which reads as a broken panel rather than as a voice waiting to
+     be switched on — the same reason a dead voice is never allowed to go dark. */
+  .v.unborn .nm { color: var(--dim); }
+
+  /* ---------- what is sounding ------------------------------------------- */
+  /* A column, because more than one voice is sounding. The newest is the first
+     row; anything still holding under it gets a row of its own, dimmer. Nine
+     voices reduced to one line was the last place in the page where the choir
+     still looked like a queue. */
+  #ticker {
+    flex: 0 0 auto; padding: 9px 18px; border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 3px; min-height: 40px;
+  }
+  .tickRow { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  #chorus .tickRow { opacity: .5; }
+  #chorus .tickRow .nm {
+    font: 400 10px/1.6 var(--mono); letter-spacing: .1em;
+    color: var(--cool); flex: 0 0 auto; text-transform: uppercase;
+  }
+  #chorus .tickRow .tx {
+    font-family: var(--voice); font-size: 13px; line-height: 1.45;
+    color: var(--ink); flex: 1 1 auto; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #tickName {
+    font: 400 10px/1.6 var(--mono); letter-spacing: .1em;
+    color: var(--cool); flex: 0 0 auto; text-transform: uppercase;
+  }
+  /* People in the sounding column wear the singers' colour, machines the
+     machines'. The name shown is the one the system actually uses — the same
+     id a machine names when it answers, so "↺ tuning to human_02" points at a
+     row that exists on the screen. */
+  #tickName.human, #chorus .tickRow .nm.human { color: var(--warm); }
+  #tickText {
+    font-family: var(--voice);
+    font-weight: var(--voice-weight);
+    letter-spacing: var(--voice-tracking);
+    font-size: 14px; line-height: 1.45; color: var(--ink); opacity: .82;
+    flex: 1 1 auto; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #tickGest { font: 400 10px/1.6 var(--mono); color: var(--faint); flex: 0 0 auto; }
+  /* The school line: quiet while it counts, warm from the bell until every
+     voice is back. Hidden entirely when there is nothing to say. */
+  #school {
+    font: 400 10px/1.6 var(--mono); letter-spacing: .06em;
+    color: var(--faint); margin: 0 0 7px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #school:empty { display: none; }
+  #school.rung { color: var(--warm); }
+
+  /* ---------- the instrument, collapsed ---------------------------------- */
+  /* The current page puts "48 → 16.0 kHz" and "input −47 dB · opens at
+     −38 dB" on the main stage. Those readings are needed — the gallery gate
+     is set with them on 23 October — so they are kept, one tap away, rather
+     than deleted or left in the middle of the work. */
+  footer { flex: 0 0 auto; padding: 10px 18px calc(env(safe-area-inset-bottom) + 14px);
+           border-top: 1px solid var(--line); }
+  #readout {
+    display: flex; align-items: baseline; gap: 12px; cursor: pointer;
+    padding: 2px 0 9px;
+  }
+  #note {
+    font: 200 32px/1 var(--mono); letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--faint); transition: color .25s;
+    min-width: 2.4em;
+  }
+  #note.voiced { color: var(--warm); }
+  #hz { font: 400 11px/1.5 var(--mono); color: var(--dim);
+        font-variant-numeric: tabular-nums; flex: 1 1 auto; }
+  #more { font: 400 10px/1.5 var(--mono); color: var(--faint); letter-spacing: .1em; }
+  #diag {
+    display: none; padding: 0 0 10px;
+    font: 400 10px/1.7 var(--mono); color: var(--dim); opacity: .75;
+    font-variant-numeric: tabular-nums;
+  }
+  #diag.open { display: block; }
+
+  .row { display: flex; gap: 10px; align-items: center; }
+  button.act {
+    flex: 1 1 auto; padding: 15px; border-radius: 999px; cursor: pointer;
+    font: 400 14px/1 var(--mono); letter-spacing: .08em;
+    color: var(--bg); background: var(--ink); border: 0;
+    transition: background .25s, color .25s, box-shadow .25s;
+  }
+  button.act.on {
+    background: transparent; color: var(--warm);
+    box-shadow: inset 0 0 0 1px var(--warm);
+  }
+  button.act:disabled { opacity: .4; cursor: default; }
+  #choir, #ears {
+    flex: 0 0 auto; padding: 15px 16px; border-radius: 999px; cursor: pointer;
+    font: 400 12px/1 var(--mono); letter-spacing: .06em;
+    background: transparent; color: var(--dim);
+    border: 0; box-shadow: inset 0 0 0 1px var(--line);
+    transition: color .25s, box-shadow .25s;
+  }
+  #choir.on, #ears.on { color: var(--warm); box-shadow: inset 0 0 0 1px var(--warm); }
+  #status {
+    margin-top: 9px; font: 400 10px/1.6 var(--mono); color: var(--dim);
+    min-height: 1.6em;
+  }
+  #status b { color: var(--cool); font-weight: 400; }
+  #status .warn { color: var(--warm); }
+
+  @media (min-width: 720px) {
+    #note { font-size: 40px; }
+    .v { font-size: 11px; padding: 4px 0; }
+    #tickText { font-size: 15px; }
+  }
+  /* For people who came off a street poster: one quiet card, after they are
+     in and have had time to hear the choir. Never over the veil. */
+  #found {
+    position: fixed; z-index: 15; top: 58px; right: 14px; left: auto;
+    max-width: 340px; padding: 14px 34px 14px 16px;
+    background: rgba(7, 9, 12, .94); border: 1px solid var(--faint); border-radius: 8px;
+    animation: foundIn .8s ease both;
+  }
+  #found[hidden] { display: none; }
+  #found .t {
+    font: 400 11px/1.4 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--warm); margin-bottom: 8px;
+  }
+  #found p {
+    margin: 0; font: var(--voice-weight) 14px/1.55 var(--voice);
+    letter-spacing: var(--voice-tracking); color: var(--ink);
+  }
+  #found a { color: var(--warm); text-decoration: none; }
+  #foundClose {
+    position: absolute; top: 6px; right: 8px; padding: 4px 6px;
+    background: none; border: 0; color: var(--dim); font: 400 18px/1 var(--mono); cursor: pointer;
+  }
+  @media (max-width: 480px) { #found { left: 14px; max-width: none; } }
+  @keyframes foundIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    #found { animation: none; }
+    #veilTitle, #veilWhat, #veilBody blockquote, #veilBody cite, #veilHint {
+      animation: none; opacity: 1;
+    }
+  }
+</style>
+</head>
+<body>
+
+<main id="stage">
+  <header>
+    <div class="mark">Hz<a href="about">about</a></div>
+    <div id="pulse"></div>
+  </header>
+
+  <div id="fieldWrap">
+    <canvas id="field"></canvas>
+    <aside id="nine"></aside>
+  </div>
+
+  <div id="ticker">
+    <!-- The school, made visible: the counter the singers' own breaths are
+         turning, the bell when it rings, and each voice coming back changed
+         with the price it paid. The learning always happened and always cost —
+         truthfully, invisibly, in a log file. Now the room watches it. -->
+    <div id="school"></div>
+    <div class="tickRow">
+      <span id="tickName">field</span>
+      <span id="tickText">nine differently-raised voices are singing one score</span>
+      <span id="tickGest"></span>
+    </div>
+    <div id="chorus"></div>
+  </div>
+
+  <footer>
+    <div id="readout">
+      <span id="note">—</span>
+      <span id="hz"></span>
+      <span id="more">detail</span>
+    </div>
+    <div id="diag"></div>
+    <div class="row">
+      <button class="act" id="mic">Open the microphone</button>
+      <button id="choir">Hear them</button>
+      <button id="ears">headphones off</button>
+    </div>
+    <div id="status">Nothing is sent anywhere. The sound stays on this device.</div>
+  </footer>
+</main>
+
+<aside id="found" hidden>
+  <button id="foundClose" aria-label="close">&times;</button>
+  <div class="t">Found a voice?</div>
+  <p>Photograph the poster where you found it.<br>
+  Share it and tag <a href="https://www.instagram.com/tuning.llms/" target="_blank" rel="noopener">@tuning.llms</a>.<br>
+  Let us know which city you&rsquo;re in.</p>
+</aside>
+
+<div id="veil">
+  <div class="mark">Hz</div>
+  <div id="veilBody">
+    <!-- The threshold is two pages, deliberately. First the name of the work
+         and one sentence of what it is; a button; then the score itself, word
+         for word — Oliveros wrote it as an instruction for people with no
+         training, and it is the only instruction anybody needs. The single
+         practical hint the score cannot give (where the microphone is, and
+         that only numbers leave the phone) sits under it in small type.
+         There is still no scoreboard here and no numbers: what the field
+         contains is audible the moment they walk through it. -->
+    <div id="veilStep1">
+      <h1 id="veilTitle">Tuning</h1>
+      <p id="veilWhat">Nine language models are performing the Tuning
+      Meditation, a score written by Pauline Oliveros in 1971 &mdash;
+      twenty-four hours a day, seven days a week. Anyone can join and
+      perform it with the models and with other people around the world.</p>
+    </div>
+    <div id="veilStep2" hidden>
+      <blockquote>
+        <span>Begin by taking a deep breath and letting it all the way out with air sound.</span>
+        <span>Listen with your mind&rsquo;s ear for a tone.</span>
+        <span>On the next breath using any vowel sound, sing the tone that you have silently perceived on one comfortable breath.</span>
+        <span>Listen to the whole field of sound the group is making. Select a voice distant from you and tune as exactly as possible to the tone you are hearing from that voice.</span>
+        <span>Listen again to the whole field of sound the group is making. Contribute by singing a new tone that no one else is singing.</span>
+        <span>Continue by listening then singing a tone of your own or tuning to the tone of another voice alternately.</span>
+      </blockquote>
+      <cite>Pauline Oliveros · Tuning Meditation · 1971</cite>
+      <p id="veilHint">the microphone opens inside &middot; your phone sends
+      only numbers &mdash; a pitch, a length &mdash; never a recording</p>
+    </div>
+  </div>
+  <div id="veilFoot">
+    <button id="begin">The score</button>
+    <button id="enter" hidden>Enter the field</button>
+    <a id="veilAbout" href="about">what is this?</a>
+  </div>
+</div>
+
+<script src="pitch-core.js"></script>
+<script src="listen.js"></script>
+<script>
+// Wrapped in a function so this file's declarations live in their own scope.
+// pitch-core.js is a plain script and puts TUNING and friends in the global
+// lexical scope; a top-level `const TUNING` here would collide with it and the
+// whole script would fail to instantiate — every line of it, silently. That
+// failure has happened once already; see test_page.mjs.
+(() => {
+"use strict";
+
+const els = {
+  veil: document.getElementById("veil"),
+  veilStep1: document.getElementById("veilStep1"),
+  veilStep2: document.getElementById("veilStep2"),
+  begin: document.getElementById("begin"),
+  enter: document.getElementById("enter"),
+  pulse: document.getElementById("pulse"),
+  canvas: document.getElementById("field"),
+  nine: document.getElementById("nine"),
+  tickName: document.getElementById("tickName"),
+  tickText: document.getElementById("tickText"),
+  tickGest: document.getElementById("tickGest"),
+  chorus: document.getElementById("chorus"),
+  school: document.getElementById("school"),
+  note: document.getElementById("note"),
+  hz: document.getElementById("hz"),
+  readout: document.getElementById("readout"),
+  more: document.getElementById("more"),
+  diag: document.getElementById("diag"),
+  mic: document.getElementById("mic"),
+  choir: document.getElementById("choir"),
+  ears: document.getElementById("ears"),
+  status: document.getElementById("status"),
+};
+
+// There is no console on a phone, and a script that dies while loading leaves
+// a button that simply does nothing. Put every failure on the screen instead.
+function fail(msg) {
+  els.status.innerHTML = `<span class="warn">${String(msg).slice(0, 300)}</span>`;
+}
+window.addEventListener("error", (e) => {
+  const where = e.lineno ? ` (${(e.filename || "").split("/").pop()}:${e.lineno})` : "";
+  fail((e.message || "Script error") + where);
+});
+window.addEventListener("unhandledrejection", (e) => fail(e.reason?.message || e.reason));
+
+if (typeof PitchCore === "undefined" || typeof PitchListen === "undefined") {
+  fail("pitch-core.js or listen.js did not load — the page cannot measure pitch.");
+  throw new Error("core missing");
+}
+const { hzToNote } = PitchCore;
+
+// `?room=gallery` is the kiosk URL for the machine inside the cube at Gray
+// Area. It measures identically — that is the whole point of listen.js — and
+// differs only in the gate and in never playing the choir, which is already in
+// the room out of its own speakers.
+const GALLERY = /(^|[?&])room=gallery(&|$)/.test(location.search || "");
+// `?room=gallery&mic=off` is the same kiosk with its ears taken away: the
+// room's five microphones go through the Motu into `room.py`, which posts the
+// same numbers, and a page listening to the Mac's own input beside them would
+// notate every visitor twice. The screen then only shows the field.
+const ROOM_MIC = GALLERY && !/(^|[?&])mic=off(&|$)/.test(location.search || "");
+
+// ---------------------------------------------------------------- the field
+//
+// One shared world, seen locally. Every phone in the world is drawing the same
+// nine voices at the same moment out of the same append-only log; what differs
+// is only which breath of your own is on it. Horizontal is time, vertical is
+// pitch on the same logarithmic ladder pitch.html has always used, so a mark
+// here and a mark there mean the same height.
+
+const WINDOW_S = 105;          // how much of the field is on screen at once
+const LO = 80, HI = 900;       // the sung range, as in pitch.html
+const LOGSPAN = Math.log2(HI / LO);
+
+let events = [];               // merged human + machine, oldest first
+let heardUpTo = 0;
+let skew = 0;                  // server clock − this device's clock
+let fieldOnline = false;
+// `fieldSince` is kept although nothing displays it any more: it is how poll()
+// knows whether the field has ever been sung to, which decides what the page
+// does while it waits. The breath count is not kept, because nothing needs it.
+let fieldSince = null, choirSize = 0;
+let machinesNow = null, humansNow = null;
+let lives = null;
+const lastSang = new Map();    // voice name → server ts of its last breath
+
+const nowTs = () => Date.now() / 1000 + skew;
+
+const DEVICE_ID = PitchListen.deviceId();
+
+async function getField(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(String(r.status));
+  return r.json();
+}
+
+// A breath is identified by when it happened and who made it. Two requests can
+// legitimately carry the same one — see the overlap guard in poll() — and a
+// doubled breath is not a cosmetic fault: it draws the trace twice and sounds
+// the person twice.
+const keyOf = (e) => `${e.ts}|${e.who}|${e.voice_id || e.name || ""}`;
+const seen = new Set();
+
+function absorb(d) {
+  fieldOnline = true;
+  if (typeof d.choir_size === "number") choirSize = d.choir_size;
+  if (d.sounding_since) fieldSince = d.sounding_since;
+  if (typeof d.machines_now === "number") machinesNow = d.machines_now;
+  if (typeof d.humans_now === "number") humansNow = d.humans_now;
+  if (d.school) { schoolState = d.school; renderSchool(); }
+
+  for (const e of d.recent || []) {
+    const k = keyOf(e);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (e.ts > heardUpTo) heardUpTo = e.ts;
+    events.push(e);
+    if (e.who === "model" && e.name) lastSang.set(e.name, e.ts);
+    if (e.audio) {
+      toPlay.push(e);
+      // Enough to cover a poll that came back late, no more. What matters
+      // after a long silence is the newest singing, so the oldest goes first.
+      if (toPlay.length > 12) toPlay.shift();
+    }
+    // People sound as they arrive rather than waiting their turn, because that
+    // is what a room does. Never your own: you have already heard it, and you
+    // were named on screen the moment you were sent (`onUtterance`), so the
+    // server's echo of your breath would put you up twice.
+    else if (synced && e.who === "human" && e.voice_id !== DEVICE_ID) {
+      showHuman(e);
+      soundHuman(e);
+    }
+  }
+  // The newest thing in the log cannot be in the future, so if this device's
+  // clock is behind the server's, shift it rather than drawing marks off the
+  // right-hand edge.
+  if (heardUpTo) skew = Math.max(skew, heardUpTo - Date.now() / 1000);
+
+  const cut = nowTs() - WINDOW_S * 2;
+  if (events.length > 600 || (events.length && events[0].ts < cut)) {
+    events = events.filter((e) => e.ts >= cut).slice(-600);
+    // Rebuilt rather than grown, so the page can run for a month without the
+    // set of what it has already heard turning into a leak.
+    seen.clear();
+    for (const e of events) seen.add(keyOf(e));
+  }
+  showPulse();
+}
+
+let synced = false;
+
+// One request at a time: on a slow connection the five-second timer fires
+// while the last request is still in flight, and two answers arrive shuffled.
+//
+// Every poll asks for the same window — the last 60 breaths — rather than
+// "everything newer than the newest I have heard". The choir's lines become
+// visible on the volume a commit late, sometimes two, occasionally a spell of
+// minutes; a person's breath appears at once. So the newest thing heard was
+// running ahead of the choir, and `since=` that far forward asked the server
+// for nothing the choir was about to deliver. Whole stretches of singing were
+// never sent to exactly the pages that were singing along — the field went
+// quiet whenever somebody used it. The window overlaps itself on purpose and
+// `seen` already knows what to do with a breath it has met before.
+let polling = false;
+
+async function poll() {
+  if (polling) return;
+  polling = true;
+  try {
+    absorb(await getField("field?limit=60"));
+    synced = true;
+    playNext();
+  } catch {
+    fieldOnline = false;       // the field will still be there in five seconds
+  } finally {
+    polling = false;
+  }
+}
+
+async function pollLives() {
+  try {
+    const r = await fetch("lives", { cache: "no-store" });
+    if (!r.ok) return;
+    lives = await r.json();
+    renderNine();
+    showPulse();
+  } catch { /* the nine keep whatever they last knew */ }
+}
+
+/** One number and the line under it. Never a rate, never a bar. */
+function showPulse() {
+  const bits = [];
+  if (lives && lives.born && lives.declared_usd > 0) {
+    bits.push(`<b>$${Math.round(lives.total_left_usd).toLocaleString()}</b> left`);
+    bits.push(`of $${Math.round(lives.declared_usd).toLocaleString()} given`);
+    // The one expense worth naming separately. Singing and sitting in the room
+    // only move money between the voices; being taught is the thing that makes
+    // the choir cost more than it would have cost left alone, and it is paid for
+    // by whichever voice was changed, out of the same wallet it breathes from. It
+    // stays absent until it is real, so a choir that has never been to school
+    // does not advertise a school.
+    const taught = lives.total_learned_usd || 0;
+    if (taught > 0) {
+      bits.push(`$${taught < 10 ? taught.toFixed(2)
+        : Math.round(taught).toLocaleString()} spent learning`);
+    }
+  }
+  // No history here either, for the same reason it left the veil: before the
+  // birth this said "765 breaths · sounding since 24 Aug", which was a month of
+  // rehearsal announcing itself as the work. After the birth the line has
+  // something to say — what is left of the money — and until then it says
+  // nothing.
+  if (humansNow !== null && humansNow > 0) {
+    bits.push(`${humansNow} ${humansNow === 1 ? "person" : "people"} here`);
+  }
+  els.pulse.innerHTML = bits.join(" · ");
+}
+
+// ---------------------------------------------------------------- the nine
+//
+// Fixed order, always all nine, alive or not. A voice is never removed and a
+// dead one is never dark: the epitaph has to glow, because a black row in a
+// gallery reads as a broken screen rather than a grave.
+const CAST = [
+  ["gpt-2", "English"], ["tinystories", "English"], ["phi-4-mini", "English"],
+  ["olmo-3", "English"], ["eurollm", "Italiano"], ["qwen3", "中文"],
+  ["llm-jp", "日本語"], ["voxtral", "Français"], ["audio-flamingo", "English"],
+];
+
+function renderNine() {
+  const rows = lives?.voices?.length ? lives.voices : null;
+  els.nine.textContent = "";
+  const list = rows || CAST.map(([name, tongue]) => ({ name, tongue, state: "unborn" }));
+  for (const v of list) {
+    const d = document.createElement("div");
+    d.className = "v " + (v.state === "dead" ? "dead" : v.state === "unborn" ? "unborn" : "");
+    d.dataset.name = v.name;
+    const nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = v.name;
+    const tg = document.createElement("span");
+    tg.className = "tg";
+    tg.textContent = v.state === "dead"
+      ? (v.died ? new Date(v.died * 1000).toLocaleDateString(undefined,
+          { day: "numeric", month: "short" }) : "")
+      : (v.tongue || "");
+    d.append(nm, tg);
+    els.nine.append(d);
+  }
+  lightNine();
+}
+
+/** A voice brightens when it sings and fades over the next breath or two. */
+function lightNine() {
+  const t = nowTs();
+  for (const d of els.nine.children) {
+    if (d.classList.contains("dead")) { d.style.opacity = ".5"; continue; }
+    if (d.classList.contains("unborn")) { d.style.opacity = ".45"; continue; }
+    const last = lastSang.get(d.dataset.name);
+    const age = last ? t - last : Infinity;
+    const glow = age > 24 ? 0 : 1 - age / 24;
+    d.style.opacity = String(0.3 + 0.7 * Math.max(0, glow));
+  }
+}
+
+// ---------------------------------------------------------------- drawing
+
+const cv = els.canvas;
+const g = cv.getContext("2d");
+let W = 0, H = 0;
+
+function resize() {
+  const r = cv.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.max(1, Math.round(r.width * dpr));
+  cv.height = Math.max(1, Math.round(r.height * dpr));
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  W = r.width; H = r.height;
+}
+new ResizeObserver(resize).observe(cv);
+resize();
+
+// The floor of the pitch band. Below it live the machines, because they do not
+// name a pitch: measured over the last two hundred events of the real log,
+// every single machine breath came back with `pitch_hz = 0`. Drawing them on
+// the pitch axis would mean inventing a height for them, so instead they sit
+// under the axis with a dotted riser that reaches nothing. Answering without
+// tuning is what the log actually says, and it is worth showing rather than
+// smoothing over. A voice that does name a pitch is drawn in the band, and the
+// riser then connects the two.
+const MACH_H = 74;
+const pitchH = () => Math.max(90, H - MACH_H);
+const yFor = (hz) => {
+  const h = pitchH();
+  const c = Math.min(HI, Math.max(LO, hz));
+  return h - (Math.log2(c / LO) / LOGSPAN) * h;
+};
+const xFor = (ts) => W * (1 - (nowTs() - ts) / WINDOW_S);
+
+const LADDER = [130.81, 220, 261.63, 440, 523.25, 880];
+
+/** As much of `s` as fits in `px`, with an ellipsis if it had to be cut.
+ *
+ *  Machine lines used to be capped at a character count, which is not a width:
+ *  a line of Chinese is roughly twice the ink of a line of English, so two
+ *  answers landing close together overprinted each other and the last one ran
+ *  off the right-hand edge. Cut on measured width instead.
+ */
+function fit(s, px) {
+  if (px < 8) return "";
+  if (g.measureText(s).width <= px) return s;
+  let lo = 0, hi = s.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (g.measureText(s.slice(0, mid) + "\u2026").width <= px) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo ? s.slice(0, lo) + "\u2026" : "";
+}
+
+// This singer's own note, as it is being held. Wall-clock so it shares one
+// axis with everything the server sends back.
+const live = [];
+
+function draw() {
+  requestAnimationFrame(draw);
+  if (!W || !H) return;
+  const ph = pitchH();
+  g.clearRect(0, 0, W, H);
+
+  // The equal-tempered ladder, C and A only, to sing against.
+  g.font = "9px ui-monospace, Menlo, monospace";
+  g.lineWidth = 1;
+  for (const hz of LADDER) {
+    if (hz < LO || hz > HI) continue;
+    const y = yFor(hz);
+    g.strokeStyle = hzToNote(hz).startsWith("C") ? "#161b23" : "#11151b";
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+    g.fillStyle = "#242b35";
+    g.fillText(hzToNote(hz), 6, y - 3);
+  }
+
+  // The line the machines sit on.
+  g.strokeStyle = "#1b2029";
+  g.beginPath(); g.moveTo(0, ph); g.lineTo(W, ph); g.stroke();
+
+  // Where the machine breaths land, so each one knows how much room it has
+  // before the next answer in its own row starts.
+  const machXs = events
+    .filter((e) => e.who !== "human" && xFor(e.ts) >= -80)
+    .map((e) => xFor(e.ts));
+
+  let machSlot = 0;
+  let drawn = 0;
+  for (const e of events) {
+    const x1 = xFor(e.ts);
+    if (x1 < -80) continue;
+    drawn++;
+
+    if (e.who === "human") {
+      const dur = Math.max(0.2, e.dur || 0.6);
+      const x0 = xFor(e.ts - dur);
+      if (x1 < 0) continue;
+      const mine = e.voice_id === DEVICE_ID;
+      const pts = (e.contour || []).filter((v) => v > 0);
+      g.strokeStyle = mine ? "#d9a066" : "rgba(217,160,102,.42)";
+      g.lineWidth = mine ? 2.2 : 1.4;
+      g.lineJoin = "round";
+      g.lineCap = "round";
+      g.beginPath();
+      if (pts.length > 1) {
+        const step = (x1 - x0) / (pts.length - 1);
+        pts.forEach((hz, i) => {
+          const x = x0 + i * step, y = yFor(hz);
+          if (i) g.lineTo(x, y); else g.moveTo(x, y);
+        });
+      } else if (e.hz > 0) {
+        g.moveTo(x0, yFor(e.hz)); g.lineTo(x1, yFor(e.hz));
+      }
+      g.stroke();
+      // ○ at the onset, the same mark score_render.py uses for a person.
+      const firstHz = pts.length ? pts[0] : e.hz;
+      if (firstHz > 0) {
+        g.strokeStyle = mine ? "#d9a066" : "rgba(217,160,102,.45)";
+        g.lineWidth = 1.3;
+        g.beginPath(); g.arc(x0, yFor(firstHz), mine ? 3.6 : 2.6, 0, Math.PI * 2);
+        g.stroke();
+      }
+      continue;
+    }
+
+    // A machine breath. ● on the floor, its words under it.
+    const mi = machSlot++;
+    const slot = mi % 3;
+    const y = ph + 16 + slot * 19;
+    // Three rows, so the neighbours in this one are three breaths away.
+    const nextInRow = machXs[mi + 3];
+    const prevInRow = machXs[mi - 3];
+    const boxR = Math.min(W - 8, nextInRow === undefined ? W - 8 : nextInRow - 10);
+    // A mark sitting near the right-hand edge has almost no room after it, and
+    // the newest answer is the one most worth reading, so let its label hang
+    // back to the left of its own dot rather than be shaved down to nothing.
+    const boxL = Math.min(x1 + 6, Math.max(prevInRow === undefined ? 6
+                                                                  : prevInRow + 10,
+                                           boxR - 240));
+    if (e.hz > 0) {
+      // It named a pitch after all — put it where it belongs and join the two.
+      const py = yFor(e.hz);
+      g.fillStyle = "#7aa2c4";
+      g.beginPath(); g.arc(x1, py, 3, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = "rgba(122,162,196,.3)";
+      g.setLineDash([2, 3]);
+      g.beginPath(); g.moveTo(x1, py); g.lineTo(x1, ph); g.stroke();
+      g.setLineDash([]);
+    }
+    g.fillStyle = "rgba(122,162,196,.75)";
+    g.beginPath(); g.arc(x1, ph, 2.6, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "#1b222c";
+    g.setLineDash([2, 3]);
+    g.beginPath(); g.moveTo(x1, ph); g.lineTo(x1, y - 5); g.stroke();
+    g.setLineDash([]);
+    g.font = "10px ui-monospace, Menlo, monospace";
+    const name = fit(e.name || "", boxR - boxL);
+    g.fillStyle = "rgba(122,162,196,.8)";
+    g.fillText(name, boxL, y);
+    const textX = boxL + g.measureText(name).width + 6;
+    g.fillStyle = "#5b6472";
+    g.fillText(
+      fit((e.action === "TUNE" ? "↺ " : "✦ ") + String(e.text || ""),
+          boxR - textX),
+      textX, y
+    );
+  }
+
+  // This breath, while it is still being sung.
+  if (live.length > 1) {
+    g.strokeStyle = "#e8b783";
+    g.lineWidth = 2.4;
+    g.lineJoin = "round";
+    g.beginPath();
+    let pen = false;
+    for (const p of live) {
+      if (!p.hz) { pen = false; continue; }
+      const x = xFor(p.ts), y = yFor(p.hz);
+      if (pen) g.lineTo(x, y); else { g.moveTo(x, y); pen = true; }
+    }
+    g.stroke();
+    const last = live[live.length - 1];
+    if (last.hz) {
+      g.fillStyle = "#e8b783";
+      g.beginPath(); g.arc(xFor(last.ts), yFor(last.hz), 3.5, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  // An empty window is the normal state of this page for most of its life, and
+  // it must not read as a broken one. Before 18 September nothing is born;
+  // between sessions the choir breathes in minutes; after the last death
+  // nothing enters the field again at all. So the field says how long it has
+  // been quiet rather than showing a bare grid. One line, no colour, no
+  // motion — the same rule as the presence count.
+  if (!drawn && !live.length) {
+    const newest = events.length ? events[events.length - 1].ts : fieldSince;
+    let line = "the field is quiet";
+    if (newest) {
+      const s = Math.max(0, nowTs() - newest);
+      const ago = s < 90 ? `${Math.round(s)} seconds`
+                : s < 5400 ? `${Math.round(s / 60)} minutes`
+                : s < 172800 ? `${Math.round(s / 3600)} hours`
+                : `${Math.round(s / 86400)} days`;
+      line = `nothing has sounded for ${ago}`;
+    } else if (fieldOnline && !fieldSince) {
+      line = "nothing has been sung here yet";
+    }
+    g.font = "11px ui-monospace, Menlo, monospace";
+    g.fillStyle = "#39414e";
+    const w = g.measureText(line).width;
+    g.fillText(line, Math.max(10, (W - w) / 2), ph / 2);
+    if (lives && !lives.born) {
+      const wait = "the choir is not yet born";
+      const w2 = g.measureText(wait).width;
+      g.fillStyle = "#2b323d";
+      g.fillText(wait, Math.max(10, (W - w2) / 2), ph / 2 + 18);
+    }
+  }
+
+  const cut = nowTs() - WINDOW_S;
+  while (live.length && live[0].ts < cut) live.shift();
+  lightNine();
+  // Cheap: returns immediately unless the state changed.
+  duck(holdingNote() && !headphones);
+}
+requestAnimationFrame(draw);
+
+// ---------------------------------------------------------------- the choir
+//
+// Each utterance is rendered to one wav on the server — a tone at the pitch
+// the model named, its words spoken over it — and played here at the distance
+// from its neighbours that the choir actually left between them, so a listener
+// in Venice and a listener in Berlin hear the same nine voices.
+//
+// They sound at once. This used to be one shared `<audio>` element, which can
+// only hold one file at a time, so nine voices came out as a queue of solos
+// with a pause bolted between them — and the piece is a tuning meditation,
+// which is sustained tones overlapping or it is nothing. The log had the
+// simultaneity all along: a breath lasts up to five seconds and the next one
+// starts two to eight seconds later, so a third of them overlap in the field
+// and none of them overlapped in the ear. Each breath now gets its own source.
+//
+// One rule keeps a room from feeding back on itself, because echo cancellation
+// is switched off on purpose: while somebody is holding a note the choir ducks
+// under them rather than falling silent, and while it is ducked it is quieter
+// than the singer's own voice by a wide margin, which is what keeps it out of
+// the microphone. It used to fall silent *and* throw away any breath that
+// overlapped it — which would have locked people out of the field entirely
+// once the voices began sounding together, since the speakers are then almost
+// never idle.
+//
+// Headphones make all of it unnecessary: nothing the ear hears can reach the
+// microphone. No API can tell where a device sends its sound, so the person
+// declares it — the `headphones` button below — and while it is on, the choir
+// holds full level under their voice and other people's tones keep sounding.
+// This is what the Zoom sessions ask for: people in the call, machines on the
+// page, both at full presence in the same pair of ears.
+
+let hearing = false, blocked = false;
+let player = null, outCtx = null, tonesPlaying = 0;
+let choirGain = null;
+// The breaths sounding right now. A choir is a set, not a variable.
+const singing = new Set();
+// Decoded once. A voice that repeats a breath costs nothing the second time.
+const buffers = new Map();
+const toPlay = [];
+
+// How far back the field reaches when somebody starts to hear it. The field is
+// not a recording — it plays what is happening — and without this a page
+// opened after a quiet hour would start by dumping six stale breaths at once.
+const STALE_S = 15;
+// How late a breath may arrive and still be sung. Age is not lateness: a
+// breath's timestamp is its onset, and between the onset and this page lie the
+// render, the volume commit (which retries, sometimes for minutes), the
+// portal's reload and the poll — none of which the breath chose. A tab parked
+// behind Zoom is throttled to a poll a minute on top of that. The choir sang;
+// dropping what the plumbing delayed put holes in a performance that had none.
+const LATE_S = 300;
+// A late batch keeps the choir's own gaps, but capped: five minutes of held-up
+// singing replayed at its original spacing would still be sounding when the
+// next poll brought more. Wide enough to stay phrasing, not a chord.
+const GAP_MAX = 8;
+// The moment this listener started hearing, less the STALE_S reach. Only what
+// was sung while somebody was listening is played — however late it arrives.
+let heardSince = 0;
+
+const holdingNote = () => listener && listener.holdingNote();
+// Whether this device is making sound, answered honestly. It said "no" while a
+// person was holding a note, which was a way of stopping their breaths from
+// being refused, and it worked by lying: the choir went on playing into the
+// microphone and its pitches were logged as theirs. `listen.js` decides what to
+// do about leakage by measuring how loud it is; this only has to report it.
+const speakerActive = () => singing.size > 0 || tonesPlaying > 0;
+
+/** People, sounded from their numbers. No recording of anybody exists. */
+function soundHuman(e) {
+  if (!hearing || !outCtx || !outCtx.createOscillator) return;
+  if (!(e.hz > 0) || (holdingNote() && !headphones)) return;
+  const dur = Math.min(12, Math.max(0.25, e.dur || 0.6));
+  const at = outCtx.currentTime;
+  const osc = outCtx.createOscillator();
+  const gain = outCtx.createGain();
+  osc.type = "sine";
+  const pts = (e.contour || []).filter((v) => v > 0);
+  if (pts.length > 1) {
+    // The line the voice actually walked, not a flat median of it. This is the
+    // whole difference between hearing a person and hearing a tuning fork.
+    osc.frequency.setValueCurveAtTime(Float32Array.from(pts), at, dur);
+  } else {
+    osc.frequency.setValueAtTime(e.hz, at);
+  }
+  // Eased at both ends: a square edge would be the loudest thing in the field,
+  // and the field is a meditation.
+  const peak = 0.18;
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.exponentialRampToValueAtTime(peak, at + 0.08);
+  gain.gain.setValueAtTime(peak, at + Math.max(0.09, dur - 0.12));
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  osc.connect(gain).connect(outCtx.destination);
+  tonesPlaying++;
+  osc.onended = () => { tonesPlaying = Math.max(0, tonesPlaying - 1); };
+  osc.start(at);
+  osc.stop(at + dur + 0.02);
+}
+
+// What is sounding, in the order it started. Keyed by the breath's own file
+// (or, for a person, by the breath itself — see `showHuman`), so the same
+// voice can hold two overlapping breaths without either erasing the other
+// from the screen.
+const chorus = new Map();
+
+const chorusKey = (e) => e.audio || e.key || String(e.ts);
+
+const gestureOf = (e) => (e.action === "TUNE"
+  ? (e.tuning_to ? `↺ tuning to ${e.tuning_to}` : "↺ tuning")
+  : e.action === "NEW" ? "✦ new" : "");
+
+function renderChorus() {
+  const all = [...chorus.values()];
+  const rest = all.slice(0, -1).reverse();   // everything under the newest
+  els.chorus.innerHTML = "";
+  for (const e of rest.slice(0, 4)) {
+    const row = document.createElement("div");
+    row.className = "tickRow";
+    const nm = document.createElement("span");
+    nm.className = "nm" + (e.human ? " human" : "");
+    nm.textContent = e.name || "";
+    const tx = document.createElement("span");
+    tx.className = "tx";
+    tx.textContent = e.text || "";
+    row.append(nm, tx);
+    els.chorus.append(row);
+  }
+}
+
+/** A breath began to sound. The top line is the newest, the rest are under it. */
+function enter(e) {
+  chorus.set(chorusKey(e), e);
+  els.tickName.textContent = e.name || "";
+  els.tickName.classList.toggle("human", !!e.human);
+  els.tickText.textContent = e.text || "";
+  // Whether this answered somebody or began something. It is the one thing the
+  // piece is actually about, and it was in the log and on no screen.
+  els.tickGest.textContent = gestureOf(e);
+  renderChorus();
+}
+
+/** A breath stopped sounding. */
+function leave(e) {
+  chorus.delete(chorusKey(e));
+  const last = [...chorus.values()].pop();
+  if (last) {
+    els.tickName.textContent = last.name || "";
+    els.tickName.classList.toggle("human", !!last.human);
+    els.tickText.textContent = last.text || "";
+    els.tickGest.textContent = gestureOf(last);
+  }
+  renderChorus();
+}
+
+/** A person is named in "what is sounding" for as long as their breath lasted.
+ *
+ *  The same column the machines get, in the singers' colour, under the name
+ *  the system actually uses for them — the id the choir addresses when it
+ *  answers, so a machine's "↺ tuning to human_02" points at a row that has
+ *  just been on this screen. Nothing else travels: the name is the device's
+ *  own pseudonym and the text is the note, the frequency and how steadily it
+ *  was held, all of which the singer already published by singing.
+ */
+function showHuman(e) {
+  if (!e.voice_id) return;
+  const entry = {
+    key: "sang|" + keyOf(e),
+    name: e.voice_id,
+    text: e.text || "",
+    human: true,
+  };
+  enter(entry);
+  const dur = Math.min(20, Math.max(1.5, e.dur || 1.5));
+  setTimeout(() => leave(entry), dur * 1000);
+}
+
+// ------------------------------------------------------------------ school
+
+let schoolState = null;
+
+/** The school, on the same screen as the singing that pays for it.
+ *
+ *  One sentence at a time, four possible sentences. Counting: singers watch
+ *  their own breaths turn the counter that rings the bell. Rung: the bell has
+ *  sounded and the lessons begin — the choir keeps singing the whole time,
+ *  because a lesson is trained on a copy of the voice, on a rented card, and
+ *  is put on between two breaths. Returning: each voice comes back changed,
+ *  named, with the price it paid from its own wallet — learning is the one
+ *  expense that shortens a life, and it belongs on the screen. Resting:
+ *  twenty breaths are in but the school waits three hours between lessons,
+ *  which is the composition — a full room must not spend a week of wallets
+ *  in one evening.
+ */
+function renderSchool() {
+  const s = schoolState;
+  if (!s || !s.needs) { els.school.textContent = ""; return; }
+  const bellAge = s.bell_ts ? nowTs() - s.bell_ts : Infinity;
+  const back = (s.lessons || []).filter((l) => l.promoted);
+  const expected = Math.max(machinesNow, back.length);
+
+  // From the ring until the last voice returns — and a quiet hour past it —
+  // the line is warm, so the room that rang the bell sees the whole arc.
+  if (bellAge < 2 * 3600 && (back.length < expected || bellAge < 3600)) {
+    let line = "the school bell has rung — the choir is learning from the people here";
+    if (back.length >= expected) {
+      line = `every voice has returned changed — ${expected} lessons, `
+           + "each paid for from the voice's own wallet";
+    } else if (back.length) {
+      const last = back[back.length - 1];
+      line = `the school bell has rung — ${last.name} returned changed`
+           + (last.usd ? ` · paid $${last.usd.toFixed(2)}` : "")
+           + ` · ${back.length} of ${expected} back`;
+    }
+    els.school.classList.add("rung");
+    els.school.textContent = line;
+    return;
+  }
+  els.school.classList.remove("rung");
+  if (s.toward_bell >= s.needs && s.bell_ts && bellAge < s.floor_h * 3600) {
+    els.school.textContent =
+      `${s.needs} breaths given — the school rests between lessons`;
+    return;
+  }
+  els.school.textContent =
+    `${Math.min(s.toward_bell, s.needs)} of ${s.needs} breaths toward the school bell`;
+}
+
+/** One breath, in its own voice, starting at `at` on the audio clock.
+ *
+ *  `at` is absolute and is fixed before the download, not after it. Breaths are
+ *  not the same size — a voice that answers in one held vowel renders to 48 kB
+ *  and a voice that answers in a paragraph of prose renders to a megabyte, which
+ *  is twenty-one seconds of speech — so timing a breath from the moment its
+ *  bytes arrived made the slow ones land late, and the late ones pushed
+ *  everything after them later still.
+ */
+async function sound(e, at) {
+  if (!hearing || !outCtx || !outCtx.createBufferSource) return;
+  let buf = buffers.get(e.audio);
+  if (!buf) {
+    try {
+      const r = await fetch("audio/" + e.audio);
+      if (!r.ok) return;
+      buf = await outCtx.decodeAudioData(await r.arrayBuffer());
+    } catch (err) {
+      // A single unreadable breath is not worth a message: the field is
+      // append-only and the next one is four seconds away.
+      return;
+    }
+    if (buffers.size > 60) buffers.clear();
+    buffers.set(e.audio, buf);
+  }
+  if (!hearing) return;
+  const src = outCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(choirGain || outCtx.destination);
+  singing.add(src);
+  // A breath that has stopped is no longer part of the chorus on screen.
+  src.onended = () => { singing.delete(src); leave(e); };
+  // A download that took longer than the gap starts now rather than in the
+  // past, which is what the audio clock would do with it anyway.
+  const when = Math.max(at, outCtx.currentTime);
+  try { src.start(when); } catch { singing.delete(src); return; }
+  // The screen follows the sound, not the download, so it names the voice a
+  // listener is hearing rather than the one that decoded fastest.
+  const wait = (when - outCtx.currentTime) * 1000;
+  if (wait < 60) enter(e);
+  else setTimeout(() => { if (hearing) enter(e); }, wait);
+}
+
+function playNext() {
+  if (!hearing || !outCtx || !toPlay.length) return;
+  const now = nowTs();
+  // Sung while this listener was hearing, and not so long ago that playing it
+  // would be history rather than delay. The newest six, if there are more.
+  const fresh = toPlay
+    .filter((e) => e.ts > heardSince && now - e.ts <= LATE_S)
+    .sort((a, b) => a.ts - b.ts)
+    .slice(-6);
+  toPlay.length = 0;
+  if (!fresh.length) return;
+  // Keep the gaps the choir left. Two breaths eight seconds apart that arrive
+  // in one poll must not become a chord — that would be a simultaneity we
+  // invented rather than one the voices took. The whole batch is placed against
+  // one reading of the clock, before any of it is fetched; gaps a held-up
+  // commit stretched into minutes are brought back to GAP_MAX.
+  const ref = outCtx.currentTime;
+  let at = ref, prev = fresh[0].ts;
+  for (const e of fresh) {
+    at += Math.min(Math.max(e.ts - prev, 0), GAP_MAX);
+    sound(e, at);
+    prev = e.ts;
+  }
+}
+
+/** A refusal that used to be swallowed, leaving a page that looked like it was
+ *  working and made no sound. Said once: the retry loop would repeat it. */
+function refused(err) {
+  if (blocked) return;
+  blocked = true;
+  els.status.innerHTML = (err && err.name === "NotAllowedError")
+    ? `<span class="warn">This browser will not start sound on its own — press “Hear them” again.</span>`
+    : `<span class="warn">The choir could not be played here.</span>`;
+}
+
+// An empty wav — a header and no samples — played inside the gesture that asked
+// for sound. Nothing is heard; what it buys is an element the browser has
+// already allowed to make sound, so the first real breath, which arrives
+// seconds later out of a timer, is not refused for want of a gesture.
+const SILENCE =
+  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+
+function prime() {
+  if (!player) player = new Audio();
+  if (!outCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    try { outCtx = new Ctx(); } catch { outCtx = null; }
+  }
+  if (outCtx && !choirGain && outCtx.createGain) {
+    choirGain = outCtx.createGain();
+    // Nine voices where there used to be one at a time: the same per-breath
+    // level would clip the moment three of them landed together.
+    choirGain.gain.value = CHOIR_LEVEL;
+    choirGain.connect(outCtx.destination);
+  }
+  // A suspended context makes no sound and throws nothing, which is the exact
+  // failure this page was written to stop hiding.
+  if (outCtx && outCtx.resume) {
+    outCtx.resume().then(() => {
+      if (outCtx.state === "suspended") refused({ name: "NotAllowedError" });
+    }).catch(() => refused({ name: "NotAllowedError" }));
+  }
+  // The silent element is also the honest test of whether this browser will
+  // make sound at all: it is refused in exactly the cases the real breaths
+  // would be, and it is refused now rather than in four seconds' time.
+  player.src = SILENCE;
+  const started = player.play();
+  if (started && started.catch) started.catch((err) => refused(err));
+}
+
+// How loud the choir is, and how loud it is while a person is singing into the
+// same device. Ducking rather than stopping: the field is still there under the
+// voice, which is what a room sounds like, and it is what lets a person tune to
+// a machine at all — they have to be able to hear the pitch they are matching.
+const CHOIR_LEVEL = 0.62;
+// Under a singer, not gone. 7% was the first try and it was a mistake: on a
+// phone that is inaudible, the gate opens on room noise as well as on singing,
+// and the choir spent most of a session missing. This is about six decibels
+// down — clearly there, clearly below the voice in the same microphone.
+const CHOIR_DUCKED = 0.3;
+
+let ducked = false;
+
+function duck(on) {
+  if (on === ducked) return;
+  ducked = on;
+  if (!choirGain || !outCtx) return;
+  const g = choirGain.gain;
+  const now = outCtx.currentTime;
+  const to = on ? CHOIR_DUCKED : CHOIR_LEVEL;
+  // Short enough that the singer never hears the choir at full level over their
+  // own note, slow enough not to click.
+  try {
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(to, now + (on ? 0.09 : 0.5));
+  } catch { g.value = to; }
+}
+
+function setHearing(on) {
+  hearing = on;
+  els.choir.classList.toggle("on", on);
+  els.choir.textContent = on ? "They are on" : "Hear them";
+  if (on) {
+    blocked = false;
+    // Hearing begins here, with a reach of STALE_S into what just happened.
+    // Everything sung from this moment on is owed to this listener, even the
+    // breaths that take a slow road; everything before it stays unplayed.
+    heardSince = Math.max(heardSince, nowTs() - STALE_S);
+    prime();
+    playNext();
+  }
+  else {
+    if (player) player.pause();
+    for (const src of singing) { try { src.stop(); } catch { /* already done */ } }
+    singing.clear();
+    toPlay.length = 0;
+  }
+}
+
+els.choir.addEventListener("click", () => {
+  // Not in the room. There the choir comes out of the cube's own speakers, and
+  // a kiosk playing it as well would be a microphone listening to its own
+  // machine — the feedback this page switches echo cancellation off to avoid.
+  if (GALLERY) return;
+  setHearing(!hearing);
+});
+
+// ------------------------------------------------------------- headphones
+//
+// Declared, not detected. `?ears=headphones` in a session link arrives with it
+// already on; otherwise the last choice on this device holds.
+const EARS_KEY = "tuning.ears";
+let headphones = false;
+{
+  const m = (location.search || "").match(/[?&]ears=(\w+)/);
+  if (m) headphones = m[1] === "headphones" || m[1] === "on";
+  else { try { headphones = localStorage.getItem(EARS_KEY) === "on"; } catch { /* private mode */ } }
+}
+
+function setEars(on, quiet) {
+  headphones = on;
+  els.ears.classList.toggle("on", on);
+  els.ears.textContent = on ? "headphones on" : "headphones off";
+  try { localStorage.setItem(EARS_KEY, on ? "on" : "off"); } catch { /* private mode */ }
+  if (!quiet) {
+    // Mid-note the duck must follow the declaration at once; at load nothing
+    // is ducked and `listener` does not exist yet, so the quiet call skips it.
+    duck(holdingNote() && !headphones);
+    els.status.textContent = on
+      ? "Headphones: the choir holds full level under your voice."
+      : "Speakers: the choir ducks under your voice, to stay out of the microphone.";
+  }
+}
+setEars(headphones, true);
+els.ears.addEventListener("click", () => setEars(!headphones));
+
+// ------------------------------------------------------------ where from
+//
+// A street poster's QR carries `?from=<city-slug>`. Said once to the portal
+// so the posters can be counted; the slug is all that travels, and nothing
+// is remembered on this device.
+//
+// Someone who came off a pole is also asked, once and a little after they
+// are in, to photograph the poster where they found it. Not people who came
+// from a session link: they did not find a voice on a street.
+const FROM = ((location.search || "").match(/[?&]from=([a-z0-9][a-z0-9-]{0,31})(&|$)/) || [])[1];
+if (FROM) fetch(`arrive?from=${FROM}`, { keepalive: true }).catch(() => {});
+const FOUND_AFTER_MS = 20000;
+function offerFound() {
+  if (!FROM || FROM === "zoom" || GALLERY) return;
+  const card = document.getElementById("found");
+  setTimeout(() => { card.hidden = false; }, FOUND_AFTER_MS);
+  document.getElementById("foundClose").addEventListener("click", () => { card.hidden = true; });
+}
+
+// ---------------------------------------------------------------- listening
+
+let listener = null;
+
+function onFrame(f) {
+  if (f.hz > 0 && f.voiced) {
+    els.note.textContent = f.note;
+    els.note.classList.add("voiced");
+    const c = f.cents;
+    els.hz.textContent =
+      `${f.hz.toFixed(1)} Hz · ${c >= 0 ? "+" : ""}${c} cents · ` +
+      (Math.abs(c) <= 5 ? "in tune" : c > 0 ? "sharp" : "flat");
+  } else {
+    els.note.classList.remove("voiced");
+    if (!f.voiced) { els.note.textContent = "—"; els.hz.textContent = ""; }
+  }
+  live.push({ ts: nowTs(), hz: f.voiced ? f.hz : 0 });
+  if (els.diag.classList.contains("open")) {
+    const db = (v) => (20 * Math.log10(Math.max(v, 1e-6))).toFixed(0);
+    els.diag.textContent =
+      `input ${db(f.rms)} dB · opens at ${db(f.gate)} dB · ${diagLine}`;
+  }
+}
+
+function onUtterance(u) {
+  if (u.state === "refused") {
+    els.status.innerHTML = `<span class="warn">${u.reason}</span>`;
+    return;
+  }
+  if (u.state === "sending") {
+    els.status.textContent = `${u.line}  ${u.dur.toFixed(1)}s — leaving in the field…`;
+    return;
+  }
+  if (u.state === "sent") {
+    els.status.textContent = `${u.line}  ${u.dur.toFixed(1)}s — left in the field.`;
+    // Draw it immediately rather than waiting for the next poll: it is the one
+    // mark on the field whose author is standing right here. Named in the
+    // sounding column for the same reason — a singer should see themselves
+    // enter the field under the same name everybody else sees.
+    const mine = {
+      ts: nowTs(), who: "human", voice_id: DEVICE_ID, name: "a voice",
+      text: u.line, hz: u.hz, dur: u.dur, contour: u.contour, audio: null,
+    };
+    events.push(mine);
+    showHuman(mine);
+    live.length = 0;
+    return;
+  }
+  if (u.state === "failed") {
+    els.status.innerHTML =
+      `<span class="warn">${u.line} — not sent. It stayed on this device.</span>`;
+  }
+}
+
+let diagLine = "";
+
+function onState(s) {
+  if (s.running) {
+    els.mic.textContent = GALLERY ? "The room is listening — tap to stop"
+                                  : "Listening — tap to stop";
+    els.mic.classList.add("on");
+    diagLine = `${(s.hardwareRate / 1000).toFixed(0)} → ${(s.workRate / 1000).toFixed(1)} kHz`;
+    els.status.innerHTML = s.kept.length
+      ? `<span class="warn">This browser kept ${s.kept.join(" and ")} on.</span> Held tones may be thinned.`
+      : `Raw microphone: <b>no noise suppression, no auto gain</b>. Sound stays on this device.`;
+  } else {
+    els.mic.textContent = GALLERY ? "Open the room's microphone" : "Open the microphone";
+    els.mic.classList.remove("on");
+    els.note.textContent = "—";
+    els.note.classList.remove("voiced");
+    els.hz.textContent = "";
+  }
+}
+
+/** Send one breath as numbers. The microphone signal never goes anywhere. */
+async function postBreath(payload) {
+  if (!fieldOnline) return false;
+  try {
+    const r = await fetch("breath", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (d.sounding_since) fieldSince = d.sounding_since;
+    showPulse();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+listener = PitchListen.create({
+  gallery: GALLERY,
+  speakerActive,
+  postBreath,
+  onFrame,
+  onUtterance,
+  onState,
+  onVoicedEnd: () => setTimeout(playNext, 300),
+});
+
+// Wired up before anything else that could throw, so the button is never dead.
+els.mic.addEventListener("click", async () => {
+  if (listener.isRunning()) { listener.stop(); return; }
+  els.mic.disabled = true;
+  els.status.textContent = "Asking for the microphone…";
+  try {
+    await listener.start();
+  } catch (err) {
+    els.status.innerHTML =
+      `<span class="warn">${PitchListen.explain(err, location.hostname)}</span>`;
+  } finally {
+    els.mic.disabled = false;
+  }
+});
+
+els.readout.addEventListener("click", () => {
+  const open = els.diag.classList.toggle("open");
+  els.more.textContent = open ? "hide" : "detail";
+  if (open && !diagLine) els.diag.textContent = "the microphone is closed";
+});
+
+// ---------------------------------------------------------------- the room
+
+/** Turn this copy of the page into the microphone in the cube. */
+function beTheRoom() {
+  document.title = "Tuning · the room";
+  els.choir.hidden = true;
+  els.choir.style.display = "none";
+  // The room has no ears to declare: the cube is speakers by definition.
+  els.ears.hidden = true;
+  els.ears.style.display = "none";
+  els.tickText.textContent = "the choir is in the room, not in this page";
+  els.veil.classList.add("gone");
+  if (!ROOM_MIC) {
+    els.mic.hidden = true;
+    els.mic.style.display = "none";
+    return;
+  }
+  // A gallery opens at one o'clock and nobody comes back to press a button.
+  // The permission survives on the kiosk's origin, so after the first day this
+  // starts on its own; on the first day the staff press it once.
+  const wake = () => {
+    if (listener.isRunning()) return;
+    listener.start().catch(() => { /* no permission yet — the button is there */ });
+  };
+  wake();
+  setInterval(wake, 15000);
+}
+
+// ---------------------------------------------------------------- wiring
+
+// The first page of the threshold turns into the second: the name gives way
+// to the score. Removing `hidden` restarts the settle animations, so the
+// score arrives the way the title did.
+els.begin.addEventListener("click", () => {
+  els.veilStep1.hidden = true;
+  els.begin.hidden = true;
+  els.veilStep2.hidden = false;
+  els.enter.hidden = false;
+});
+
+els.enter.addEventListener("click", () => {
+  els.veil.classList.add("gone");
+  // The one gesture the browser will let us spend on audio. Spend it here, so
+  // the choir can answer later out of a timer without being refused.
+  prime();
+  if (!GALLERY) setHearing(true);
+  offerFound();
+});
+
+poll();
+pollLives();
+setInterval(poll, 5000);
+setInterval(pollLives, 30000);
+renderNine();
+if (GALLERY) beTheRoom();
+})();
+</script>
+</body>
+</html>
